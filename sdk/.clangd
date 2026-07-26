@@ -1,0 +1,19 @@
+CompileFlags:
+  Remove:
+    - -target
+    - --target=*
+    - -mcpu=*
+    - -mfprev1
+    - -mllvm
+    - -fallow-pointer-null
+    - -fprefer-gnu-section
+  Add:
+    - --target=i386-unknown-elf
+    - -DSUPPORT_MS_EXTENSIONS
+    - -DCONFIG_RELEASE_ENABLE
+    - -DCONFIG_CPU_WL83
+    - -D__GCC_PI32V2__
+    - -D__PI32V2__
+    - -D__ELF__
+    - -D__SHELL__
+    - -fms-extensions

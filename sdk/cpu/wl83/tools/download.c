@@ -4,142 +4,285 @@
 // *INDENT-OFF*
 #ifdef __SHELL__
 
-${OBJDUMP} -D -print-imm-hex -print-dbg -mcpu=r3 $1.elf > ${ROOT}/$1.lst
-${OBJDUMP} -section-headers $1.elf > ${ROOT}/segment_list.txt
-${OBJSIZEDUMP} -lite -skip-zero -enable-dbg-info $1.elf | sort -k 1 > ${ROOT}/symbol_tbl.txt
-cp $1.map ${ROOT}/$1.map
-${OBJDUMP} -section-headers $1.elf
-/opt/utils/report_segment_usage --sdk_path ${ROOT} --tbl_file ${ROOT}/symbol_tbl.txt --seg_file ${ROOT}/segment_list.txt --map_file $1.map --module_depth "{\"apps\":1,\"lib\":2,\"[lib]\":2}"
+// 1. 定义工具链的基础路径
+JIELI_TOOLCHAIN_BASE="/opt/jieli/pi32v2"
+JIELI_TOOLCHAIN_BIN="${JIELI_TOOLCHAIN_BASE}/bin"
 
-/opt/utils/strip-ini -i isd_config.ini -o isd_config.ini
+// 1.1 修复赋值空格问题，获取当前工作目录 (CWD)
+TOOL="$(pwd)"
+/* cd ${TOOL}/../../../../ */
+[[ "$TOOL" == *"demo"* ]] && cd "${TOOL}/../../../../../" || cd "${TOOL}/../../../../"
+// 1.2 计算 SDK 根目录 (上溯三级)
+// 使用 cd 和 pwd 确保获得绝对路径
+SDK_ROOT=$(pwd)
+export SDK_ROOT
 
-export PROJ_BUILD=download.bat
+cd cpu/wl83/tools
 
-echo "echo 加一下中文注释,防止服务器导出不了报错" >> ${PROJ_BUILD}
-echo "echo 加一下中文注释,防止服务器导出不了报错" >> ${PROJ_BUILD}
-echo "echo 加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释" >> ${PROJ_BUILD}
+DOWNLOAD_DIR=$(pwd)
+LZ4_PACKET="${DOWNLOAD_DIR}/lz4_packet"
+PACKRES="${DOWNLOAD_DIR}/pack_res"
+FAT_COMM="${DOWNLOAD_DIR}/fat_comm"
+DOWNLOAD_TOOL="${DOWNLOAD_DIR}/isd_download"
+FAT_IMAGE_TOOL="${DOWNLOAD_DIR}/fat_image_tool"
+ISD_DOWNLOAD="${DOWNLOAD_DIR}/isd_download"
+UBOOT_LZ4="${DOWNLOAD_DIR}/uboot_lz4" # 假设该工具名为 uboot_lz4
+
+echo "======================"
+echo "TOOL: $TOOL"
+echo "SDK_ROOT: $SDK_ROOT"
+echo "DOWNLOAD_DIR: $DOWNLOAD_DIR"
+echo "======================"
 
 
-echo "set OBJDUMP=C:\JL\pi32\bin\llvm-objdump.exe" >> ${PROJ_BUILD}
-echo "set OBJCOPY=C:\JL\pi32\bin\llvm-objcopy.exe" >> ${PROJ_BUILD}
-echo "set ELFFILE=sdk.elf" >> ${PROJ_BUILD}
-echo "set LZ4_PACKET=.\lz4_packet.exe" >> ${PROJ_BUILD}
-echo "%OBJCOPY% -O binary -j .text %ELFFILE% text.bin" >> ${PROJ_BUILD}
-echo "%OBJCOPY% -O binary -j .data %ELFFILE% data.bin" >> ${PROJ_BUILD}
-echo "%OBJCOPY% -O binary -j .ram0_data  %ELFFILE% ram0_data.bin" >> ${PROJ_BUILD}
-echo "%OBJCOPY% -O binary -j .dcache_ram_data  %ELFFILE% dcache_ram_data.bin" >> ${PROJ_BUILD}
-echo "%OBJCOPY% -O binary -j .video_ram_data  %ELFFILE% video_ram_data.bin" >> ${PROJ_BUILD}
-echo "%OBJCOPY% -O binary -j .dlog_data  %ELFFILE% dlog.bin" >> ${PROJ_BUILD}
-echo "%OBJDUMP% -section-headers %ELFFILE%" >> ${PROJ_BUILD}
-echo "%OBJDUMP% -t %ELFFILE% > symbol_tbl.txt" >> ${PROJ_BUILD}
+
+// 2. 检查基础路径是否存在且为目录
+if [ ! -d "$JIELI_TOOLCHAIN_BIN" ]; then
+    echo "错误：Jieli 工具链目录不存在或路径错误：" >&2
+    echo "期望路径: $JIELI_TOOLCHAIN_BIN" >&2
+    exit 1  # 返回非零状态码表示失败
+fi
+
+
+// 3. 检查关键工具是否存在（可选，但推荐）
+OBJCOPY_TOOL="${JIELI_TOOLCHAIN_BIN}/objcopy"
+OBJDUMP_TOOL="${JIELI_TOOLCHAIN_BIN}/objdump"
+OBJSIZEDUMP_TOOL="${JIELI_TOOLCHAIN_BIN}/objsizedump" //导出新变量
+
+if [ ! -f "$OBJCOPY_TOOL" ] || [ ! -f "$OBJDUMP_TOOL" ]; then
+    echo "警告：Jieli 工具链目录存在，但关键工具 (objcopy/objdump) 文件缺失。" >&2
+    echo "检查文件: $OBJCOPY_TOOL 和 $OBJDUMP_TOOL" >&2
+    // 即使文件缺失，我们仍可以设置变量，但建议还是退出
+    exit 2
+fi
+
+// 4. 设置并导出环境变量
+// 使用 export 确保这些变量可以在脚本启动的子进程或后续命令中使用
+export OBJCOPY="$OBJCOPY_TOOL"
+export OBJDUMP="$OBJDUMP_TOOL"
+export OBJSIZEDUMP="$OBJSIZEDUMP_TOOL"
+
+echo "Jieli 工具链路径已验证并设置成功。"
+echo "OBJCOPY 环境变量已设置为: $OBJCOPY"
+echo "OBJDUMP 环境变量已设置为: $OBJDUMP"
+
+
+ELF_NAME="$1"
+ELF_FILE="${DOWNLOAD_DIR}/${ELF_NAME}.elf"
+LIST_FILE="${DOWNLOAD_DIR}/${ELF_NAME}.lst"
+SYMBOL_TABLE_FILE="${DOWNLOAD_DIR}/symbol_tbl.txt"
+SEGMENT_FILE="${DOWNLOAD_DIR}/segment_list.txt"
+
+//核心反汇编命令 (使用双引号包裹变量以防止路径中包含空格或其他特殊字符)
+//"${OBJDUMP}" -D -print-imm-hex -print-dbg -mcpu=r3 "$ELF_FILE" > "$LIST_FILE"
+echo "正在生成段头信息文件 ($SEGMENT_FILE)..."
+"${OBJDUMP}" -section-headers "$ELF_FILE" > "$SEGMENT_FILE"
+echo "正在使用 $OBJSIZEDUMP 生成符号表 ($SYMBOL_TABLE_FILE)..."
+"${OBJSIZEDUMP}" -lite -skip-zero -enable-dbg-info "$ELF_FILE" | sort -k 1 > "$SYMBOL_TABLE_FILE"
+echo "--- ELF 文件段头信息 ---"
+"${OBJDUMP}" -section-headers "$ELF_FILE"
+echo "--------------------------"
+//${OBJDUMP} -section-headers ${ELF_FILE} > segment_list.txt
+//${OBJSIZEDUMP} -lite -skip-zero -enable-dbg-info $1.elf | sort -k 1 > symbol_tbl.txt
+//${OBJDUMP} -section-headers $1.elf
+echo "正在提取 ELF 段并生成二进制文件..."
+
+// 80: 提取 .text 段
+"${OBJCOPY}" -O binary -j .text "$ELF_FILE" "${DOWNLOAD_DIR}/text.bin"
+
+// 81: 提取 .data 段
+"${OBJCOPY}" -O binary -j .data "$ELF_FILE" "${DOWNLOAD_DIR}/data.bin"
+
+// 82: 提取 .ram0_data 段
+"${OBJCOPY}" -O binary -j .ram0_data "$ELF_FILE" "${DOWNLOAD_DIR}/ram0_data.bin"
+
+// 83: 提取 .dcache_ram_data 段
+"${OBJCOPY}" -O binary -j .dcache_ram_data "$ELF_FILE" "${DOWNLOAD_DIR}/dcache_ram_data.bin"
+
+// 84: 提取 .video_ram_data 段
+"${OBJCOPY}" -O binary -j .video_ram_data "$ELF_FILE" "${DOWNLOAD_DIR}/video_ram_data.bin"
+
+// 85: 提取 .dlog_data 段
+"${OBJCOPY}" -O binary -j .dlog_data "$ELF_FILE" "${DOWNLOAD_DIR}/dlog.bin"
+
+echo "二进制文件提取完成。"
+
+
 #ifdef CONFIG_LZ4_DATA_CODE_ENABLE
-echo "%LZ4_PACKET% -dict text.bin -input ram0_data.bin 0 data.bin 0 -o compress.bin" >> ${PROJ_BUILD}
-echo "copy /b text.bin+dcache_ram_data.bin+video_ram_data.bin+compress.bin app.bin" >> ${PROJ_BUILD}
+"${LZ4_PACKET}" -dict text.bin -input ram0_data.bin 0 data.bin 0 -o compress.bin
+
+    INPUT_DICT="${DOWNLOAD_DIR}/text.bin"
+    INPUT_RAM0="${DOWNLOAD_DIR}/ram0_data.bin"
+    INPUT_DATA="${DOWNLOAD_DIR}/data.bin"
+    OUTPUT_COMPRESS="${DOWNLOAD_DIR}/compress.bin"
+
+    "$LZ4_PACKET" -dict "$INPUT_DICT" \
+                  -input "$INPUT_RAM0" 0 "$INPUT_DATA" 0 \
+                  -o "$OUTPUT_COMPRESS"
+
+    if [ $? -ne 0 ]; then
+        echo "❌ LZ4 压缩失败！" >&2
+        exit 10
+    fi
+
+    cat "${DOWNLOAD_DIR}/text.bin" \
+        "${DOWNLOAD_DIR}/dcache_ram_data.bin" \
+        "${DOWNLOAD_DIR}/video_ram_data.bin" \
+        "$OUTPUT_COMPRESS" \
+        > "${DOWNLOAD_DIR}/app.bin"
+
+
 #else
-echo "copy /b text.bin+data.bin+dcache_ram_data.bin+video_ram_data.bin+ram0_data.bin app.bin" >> ${PROJ_BUILD}
+
+    cat "${DOWNLOAD_DIR}/text.bin" \
+        "${DOWNLOAD_DIR}/data.bin" \
+        "${DOWNLOAD_DIR}/dcache_ram_data.bin" \
+        "${DOWNLOAD_DIR}/video_ram_data.bin" \
+        "${DOWNLOAD_DIR}/ram0_data.bin" \
+        > "${DOWNLOAD_DIR}/app.bin"
 #endif
 
+if [ $? -eq 0 ]; then
+    echo "app.bin 文件生成成功：${PROJ_BUILD}/app.bin"
+else
+    echo "app.bin 文件生成失败。" >&2
+    exit 11
+fi
+
 #if defined CONFIG_WIFI_IPC_PROJECT_ENABLE
-echo "set UI_RES_PREFIX=ipc_" >> ${PROJ_BUILD}
+UI_RES_PREFIX="ipc_"
 #if defined CONFIG_VOICE_PROMPT_FILE_SAVE_IN_RESERVED_EXPAND_ZONE
-echo "packres\packres.exe -n tone -o packres/AUPACKRES ipc_aud_res" >> ${PROJ_BUILD}
+"$PACKRES" -n tone -o packres/AUPACKRES ipc_aud_res
 #endif
 #elif defined CONFIG_WIFI_DVR_PROJECT_ENABLE
 #ifdef CONFIG_UI_STYLE_LY_ENABLE
-echo "set UI_RES_PREFIX=dvr_ly_" >> ${PROJ_BUILD}
+UI_RES_PREFIX="dvr_ly_"
 #else
-echo "set UI_RES_PREFIX=dvr_jl_" >> ${PROJ_BUILD}
+UI_RES_PREFIX="dvr_jl_"
 #endif
 #if defined CONFIG_VOICE_PROMPT_FILE_SAVE_IN_RESERVED_EXPAND_ZONE
-echo "packres\packres.exe -n tone -o packres/AUPACKRES dvr_aud_res" >> ${PROJ_BUILD}
+"$PACKRES" -n tone -o packres/AUPACKRES dvr_aud_res
 #endif
 #if defined CONFIG_VOICE_PROMPT_FILE_SAVE_IN_RESERVED_EXPAND_ZONE
-echo "packres\packres.exe -n tone -o packres/AUPACKRES dvr_aud_res" >> ${PROJ_BUILD}
+"$PACKRES" -n tone -o packres/AUPACKRES dvr_aud_res
 #endif
-echo "copy ..\\..\\..\\..\\wifi_camera\\output\\stream.bin stream.bin"     >> ${PROJ_BUILD}
-echo "copy ..\\..\\..\\..\\wifi_camera\\output\\cfg_tool.bin cfg_tool.bin" >> ${PROJ_BUILD}
-echo "copy ..\\..\\..\\..\\wifi_camera\\output\\tone_en.cfg tone_en.cfg"   >> ${PROJ_BUILD}
-echo "copy ..\\..\\..\\..\\wifi_camera\\output\\tone_zh.cfg tone_zh.cfg"   >> ${PROJ_BUILD}
+cp ${SDK_ROOT}/../wifi_camera/output/stream.bin ${DOWNLOAD_DIR}/stream.bin
+cp ${SDK_ROOT}/../wifi_camera/output/cfg_tool.bin ${DOWNLOAD_DIR}/cfg_tool.bin
+cp ${SDK_ROOT}/../wifi_camera/output/tone_en.cfg ${DOWNLOAD_DIR}/tone_en.bin
+cp ${SDK_ROOT}/../wifi_camera/output/tone_zn.cfg ${DOWNLOAD_DIR}/tone_zh.bin
+
 #elif defined CONFIG_DEMO_AUDIO_PROJECT_ENABLE
 #if defined CONFIG_VOICE_PROMPT_FILE_SAVE_IN_RESERVED_EXPAND_ZONE && defined CONFIG_VOICE_PROMPT_FILE_PATH
-echo "packres\packres.exe -n tone -o packres/AUPACKRES story_aud_res" >> ${PROJ_BUILD}
+"$PACKRES" -n tone -o packres/AUPACKRES story_aud_res
 #endif
 #elif defined CONFIG_DEMO_UI_PROJECT_ENABLE
-echo "set UI_RES_PREFIX=demo_" >> ${PROJ_BUILD}
+UI_RES_PREFIX="demo_"
 #elif defined CONFIG_WIFI_SOUNDBOX_PROJECT_ENABLE
-echo "set UI_RES_PREFIX=soundbox_" >> ${PROJ_BUILD}
+UI_RES_PREFIX="soundbox_"
 #elif defined CONFIG_WIFI_STORY_MACHINE_PROJECT_ENABLE
-echo "set UI_RES_PREFIX=story_" >> ${PROJ_BUILD}
+UI_RES_PREFIX="story_"
 #if defined CONFIG_VOICE_PROMPT_FILE_SAVE_IN_RESERVED_EXPAND_ZONE && defined CONFIG_VOICE_PROMPT_FILE_PATH
-echo "packres\packres.exe -n tone -o packres/AUPACKRES story_aud_res" >> ${PROJ_BUILD}
+"$PACKRES" -n tone -o packres/AUPACKRES story_aud_res
 #endif
 #elif defined CONFIG_WIFI_BBM_PROJECT_ENABLE
-echo "set UI_RES_PREFIX=bbm_" >> ${PROJ_BUILD}
+UI_RES_PREFIX="bbm_"
 #endif
 
 #if defined CONFIG_UI_ENABLE && defined CONFIG_UI_FILE_SAVE_IN_RESERVED_EXPAND_ZONE
-echo "packres\packres.exe -n ui -o packres/UIPACKRES %UI_RES_PREFIX%ui_res" >> ${PROJ_BUILD}
+/* INPUT_SPEC="${UI_RES_PREFIX}ui_res" */
+/* OUTPUT_FILE="packres/UIPACKRES" */
+/* "$PACKRES" -n ui -o "$OUTPUT_FILE" "$INPUT_SPEC" */
+/* "$PACKRES" -n ui -o packres/UIPACKRES ${UI_RES_PREFIX}ui_res */
+"$PACKRES" -n ui -o packres/UIPACKRES ${UI_RES_PREFIX}ui_res
 #endif
 #if defined CONFIG_LOGO_FILE_SAVE_IN_RESERVED_EXPAND_ZONE
-echo "packres\packres.exe -n logo -o packres/LOGOPACKRES poweronoff_res" >> ${PROJ_BUILD}
+"$PACKRES" -n logo -o packres/LOGOPACKRES poweronoff_res
 #endif
 
 
 #if defined CONFIG_MEDIA_ENABLE
-echo "set MEDIA_RES=stream.bin -tone tone_zh.cfg tone_en.cfg" >> ${PROJ_BUILD}
+MEDIA_RES="stream.bin"
+export MEDIA_RES
 #endif
 
 #if defined CONFIG_DOUBLE_BANK_ENABLE
-echo "set UPDATE_FILES=-update_files embedded" >> ${PROJ_BUILD}
+UPDATE_FILES="-update_files embedded"
+export UPDATE_FILES
 #endif
 
 #if defined CONFIG_EXFLASH_ENABLE
-echo "packres\packres.exe -keep-suffix-case %UI_RES_PREFIX%ui_res/F_ASCII.PIX %UI_RES_PREFIX%ui_res/F_GB2312.PIX %UI_RES_PREFIX%ui_res/F_GB2312.TAB %UI_RES_PREFIX%ui_res/ascii.res -n res -o packres\font" >> ${PROJ_BUILD}
-echo -n "packres\fat_comm.exe -pad-backup2 -force-align-fat -out new_res.bin -image-size ">> ${PROJ_BUILD}
-echo -n __EXTERN_FLASH_SIZE_MB__ >> ${PROJ_BUILD}
-echo -n " -filelist packres\font -remove-empty -remove-bpb -mark-bad-after 0xfe0000" >> ${PROJ_BUILD}
-echo " -address 0" >> ${PROJ_BUILD}
-echo "packres\packres.exe -n res -o exres.bin new_res.bin 0 -normal" >> ${PROJ_BUILD}
-echo "set EXFLASH_FILES=-ex_flash exres.bin" >> ${PROJ_BUILD}
+"$PACKRES" -keep-suffix-case ${UI_RES_PREFIX}ui_res/F_ASCII.PIX ${UI_RES_PREFIX}ui_res/F_GB2312.PIX ${UI_RES_PREFIX}ui_res/F_GB2312.TAB ${UI_RES_PREFIX}ui_res/ascii.res -n res -o packres/font
+"${FAT_COMM}" -pad-backup2 -force-align-fat -out new_res.bin -image-size __EXTERN_FLASH_SIZE_MB__ -filelist packres/font -remove-empty -remove-bpb -mark-bad-after 0xfe0000 -address 0
+"$PACKRES" -n res -o exres.bin new_res.bin 0 -normal
+EXFLASH_FILES="-ex_flash exres.bin"
 #endif
 
+
+
 #if defined CONFIG_SDFILE_EXT_ENABLE
-echo -n "fat_image_tool.exe --size " >> ${PROJ_BUILD}
-echo -n CONFIG_SDNAND_HFAT_LEN_TEXT >> ${PROJ_BUILD}
-echo -n " --sectors-per-cluster " >> ${PROJ_BUILD}
-echo -n CONFIG_SDNAND_HFAT_CLUSTER_SIZE >> ${PROJ_BUILD}
-echo " --lfn true --n-root 512 --volume-name HFAT_IMG --output jl_hfat.bin --fat-dir hfat_dir" >> ${PROJ_BUILD}
-echo -n "fat_image_tool.exe --size " >> ${PROJ_BUILD}
-echo -n CONFIG_SDNAND_FAT1_LEN_TEXT >> ${PROJ_BUILD}
-echo -n " --sectors-per-cluster " >> ${PROJ_BUILD}
-echo -n CONFIG_SDNAND_FAT1_CLUSTER_SIZE >> ${PROJ_BUILD}
-echo " --lfn true --n-root 512 --volume-name FAT1_IMG --output jl_fat1.bin --fat-dir fat1_dir" >> ${PROJ_BUILD}
-echo "isd_download.exe isd_config.ini -gen2 -to-sdcard -dev wl83 -boot 0x103000 -div1 -app app.bin cfg_tool.bin -res %AUDIO_RES% %UI_RES% cfg %MEDIA_RES% -extend-bin -output-bin jl_hfs.bin %UPDATE_FILES% -no-app-bin-enc" >> ${PROJ_BUILD}
+    "${FAT_IMAGE_TOOL}" CONFIG_SDNAND_HFAT_LEN_TEXT \
+                        --sectors-per-cluster \
+                        CONFIG_SDNAND_HFAT_CLUSTER_SIZE \
+                        --lfn true --n-root 512 \
+                        --volume-name HFAT_IMG \
+                        --output jl_hfat.bin \
+                        --fat-dir hfat_dir
+
+    "${FAT_IMAGE_TOOL}"  CONFIG_SDNAND_FAT1_LEN_TEXT \
+                        --sectors-per-cluster \
+                        CONFIG_SDNAND_FAT1_CLUSTER_SIZE \
+                        --lfn true --n-root 512 \
+                        --volume-name FAT1_IMG \
+                        --output jl_fat1.bin \
+                        --fat-dir fat1_dir
+
+
+    sudo "${ISD_DOWNLOAD}" isd_config.ini \
+                      -gen2 -to-sdcard -dev wl83 -boot 0x103000 \
+                      -div1 -app app.bin cfg_tool.bin \
+                      -res "${AUDIO_RES}" "${UI_RES}" cfg "${MEDIA_RES}" \
+                      -extend-bin -output-bin jl_hfs.bin "${UPDATE_FILES}" \
+                      -no-app-bin-enc
+
 #elif defined CONFIG_SFC_ENABLE || !defined CONFIG_LZ4_COMPRESS_APP_CODE_ENABLE
-echo "isd_download.exe isd_config.ini -gen2 -tonorflash -dev wl83 -boot 0x103000 -div1 -wait 300 -uboot uboot.boot -app app.bin cfg_tool.bin -res %AUDIO_RES% %UI_RES% cfg %MEDIA_RES% -reboot 50 %UPDATE_FILES% -extend-bin %EXFLASH_FILES% -output-ufw jl_isd.ufw" >> ${PROJ_BUILD}
+
+    sudo "${ISD_DOWNLOAD}" isd_config.ini \
+                      -gen2 -tonorflash -dev wl83 -boot 0x103000 \
+                      -div1 -wait 300 -uboot uboot.boot -app app.bin cfg_tool.bin \
+                      -res "${AUDIO_RES}" "${UI_RES}" cfg "${MEDIA_RES}" \
+                      -reboot 50 "${UPDATE_FILES}" \
+                      -extend-bin "${EXFLASH_FILES}" \
+                      -output-ufw jl_isd.ufw
 #else
-//如果不压缩uboot, 需要删除tools目录下的rom.image
-//先暂时删掉rom.image，会导致不压缩uboot时代码解压出错，后面有需要再加回去
-echo "set run_addr=0x103000" >> ${PROJ_BUILD}
-echo "set load_addr=0x10B000" >> ${PROJ_BUILD}
-echo "set mask_addr=0xf0000" >> ${PROJ_BUILD}
-echo "del rom.image" >> ${PROJ_BUILD}
-echo "uboot_lz4.exe app.bin app.lz4 %run_addr% %load_addr% rom.image %mask_addr%" >> ${PROJ_BUILD}
-echo "isd_download.exe isd_config.ini -gen2 -tonorflash -dev wl83 -boot 0x103000 -div1 -wait 300 -uboot uboot.boot -app app.lz4 cfg_tool.bin -res %AUDIO_RES% %UI_RES% cfg %MEDIA_RES% -reboot 50 %UPDATE_FILES% -extend-bin %EXFLASH_FILES% -output-ufw jl_isd.ufw" >> ${PROJ_BUILD}
+
+
+run_addr="0x103000"
+load_addr="0x10B000"
+mask_addr="0xf0000"
+rm -f rom.image
+    "${UBOOT_LZ4}" app.bin app.lz4 \
+                   "${run_addr}" "${load_addr}" rom.image "${mask_addr}"
+    sudo "${ISD_DOWNLOAD}" isd_config.ini \
+                      -gen2 -tonorflash -dev wl83 -boot 0x103000 \
+                      -div1 -wait 300 -uboot uboot.boot -app app.lz4 cfg_tool.bin \
+                      -res "${AUDIO_RES}" "${UI_RES}" cfg "${MEDIA_RES}" \
+                      -reboot 50 "${UPDATE_FILES}" \
+                      -extend-bin "${EXFLASH_FILES}" \
+                      -output-ufw jl_isd.ufw
 #endif
 
 #if defined(CONFIG_DOUBLE_BANK_ENABLE) && defined(CONFIG_UPDATE_COMPRESS)
-echo "isd_download.exe -make-upgrade-bin -ufw jl_isd.ufw -output db_update.bin" >> ${PROJ_BUILD}
+sudo "${ISD_DOWNLOAD}" -make-upgrade-bin -ufw jl_isd.ufw -output db_update.bin
 #endif
 
 
-#if 0
-echo "if exist *.mp3 del *.mp3" >> ${PROJ_BUILD}
-echo "if exist *.PIX del *.PIX" >> ${PROJ_BUILD}
-echo "if exist *.TAB del *.TAB" >> ${PROJ_BUILD}
-echo "if exist *.res del *.res" >> ${PROJ_BUILD}
-echo "if exist *.sty del *.sty" >> ${PROJ_BUILD}
-#endif
+
+
+
+// 成功退出
+exit 0
+
+
 
 #if defined CONFIG_SDFILE_EXT_ENABLE
 echo "copy isd_config_loader.ini loader_tools\isd_config.ini" >> ${PROJ_BUILD}
@@ -305,14 +448,6 @@ if %FORMAT_ALL_ENABLE%A==1A set FORMAT=-format all
 set MEDIA_RES=stream.bin -tone %TONE_FILES%
 #endif
 
-#if TEE_ENABLE
-// del isd_config.ini
-// copy isd.fpga.txt isd_config.ini
-tee_tool.exe -sign-app bl_key1_private.pem app.bin tee_cfg.ini
-del app.bin
-rename app.bin.sign app.bin
-#endif
-
 REM set KEY_FILE=-key JL_792N-XXXX.key
 REM set KEY_FILE=-key1 JL_792N-XXXX.key1 -mkey JL_792N-XXXX.mkey
 
@@ -430,4 +565,5 @@ exit /b 0
 
 #endif
 // *INDENT-ON*
+
 

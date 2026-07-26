@@ -14,13 +14,14 @@
 # make ac792n_demo_demo_ui
 # make ac792n_demo_demo_hello
 # make ac792n_demo_demo_wifi
+# make ac792n_ds5dongle
 
-.PHONY: all clean ac792n_wifi_camera ac792n_wifi_soundbox ac792n_wifi_bbm ac792n_demo_demo_ble ac792n_demo_demo_wifi_ext ac792n_demo_demo_ui ac792n_demo_demo_hello ac792n_demo_demo_wifi clean_ac792n_wifi_camera clean_ac792n_wifi_soundbox clean_ac792n_wifi_bbm clean_ac792n_demo_demo_ble clean_ac792n_demo_demo_wifi_ext clean_ac792n_demo_demo_ui clean_ac792n_demo_demo_hello clean_ac792n_demo_demo_wifi
+.PHONY: all clean ac792n_wifi_camera ac792n_wifi_soundbox ac792n_wifi_bbm ac792n_demo_demo_ble ac792n_demo_demo_wifi_ext ac792n_demo_demo_ui ac792n_demo_demo_hello ac792n_demo_demo_wifi ac792n_ds5dongle clean_ac792n_wifi_camera clean_ac792n_wifi_soundbox clean_ac792n_wifi_bbm clean_ac792n_demo_demo_ble clean_ac792n_demo_demo_wifi_ext clean_ac792n_demo_demo_ui clean_ac792n_demo_demo_hello clean_ac792n_demo_demo_wifi clean_ac792n_ds5dongle
 
-all: ac792n_wifi_camera ac792n_wifi_soundbox ac792n_wifi_bbm ac792n_demo_demo_ble ac792n_demo_demo_wifi_ext ac792n_demo_demo_ui ac792n_demo_demo_hello ac792n_demo_demo_wifi
+all: ac792n_wifi_camera ac792n_wifi_soundbox ac792n_wifi_bbm ac792n_demo_demo_ble ac792n_demo_demo_wifi_ext ac792n_demo_demo_ui ac792n_demo_demo_hello ac792n_demo_demo_wifi ac792n_ds5dongle
 	@echo +ALL DONE
 
-clean: clean_ac792n_wifi_camera clean_ac792n_wifi_soundbox clean_ac792n_wifi_bbm clean_ac792n_demo_demo_ble clean_ac792n_demo_demo_wifi_ext clean_ac792n_demo_demo_ui clean_ac792n_demo_demo_hello clean_ac792n_demo_demo_wifi
+clean: clean_ac792n_wifi_camera clean_ac792n_wifi_soundbox clean_ac792n_wifi_bbm clean_ac792n_demo_demo_ble clean_ac792n_demo_demo_wifi_ext clean_ac792n_demo_demo_ui clean_ac792n_demo_demo_hello clean_ac792n_demo_demo_wifi clean_ac792n_ds5dongle
 	@echo +CLEAN DONE
 
 ac792n_wifi_camera:
@@ -70,3 +71,9 @@ ac792n_demo_demo_wifi:
 
 clean_ac792n_demo_demo_wifi:
 	$(MAKE) -C apps/demo/demo_wifi/board/wl83 -f Makefile clean
+
+ac792n_ds5dongle:
+	$(MAKE) -C apps/ds5dongle/board/wl83 -f Makefile
+
+clean_ac792n_ds5dongle:
+	$(MAKE) -C apps/ds5dongle/board/wl83 -f Makefile clean
