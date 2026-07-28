@@ -1,20 +1,21 @@
-#ifdef CONFIG_BOARD_DEMO
+#ifdef CONFIG_BOARD_AC7925B_DONGLE
 
 //*********************************************************************************//
 //                                功能模块配置                                     //
 //*********************************************************************************//
-#define CONFIG_SFC_ENABLE
-#define CONFIG_NO_SDRAM_ENABLE
+// #define CONFIG_SFC_ENABLE
+// #define CONFIG_NO_SDRAM_ENABLE
+#define CONFIG_BT_ENABLE
 
 
 //*********************************************************************************//
 //                                   时钟配置                                      //
 //*********************************************************************************//
 #define TCFG_OSC_FREQUENCY                  24000000
-#define TCFG_SYS_CLK                        192000000         //240M,192M,160M,120M,96M,80M,64M,60M,48M,40M,32M,24M，其他值时启用SYS_PLL
+#define TCFG_SYS_CLK                        320000000         //240M,192M,160M,120M,96M,80M,64M,60M,48M,40M,32M,24M，其他值时启用SYS_PLL
 #define TCFG_LSB_CLK                        48000000          //96M,80M,60M,48M,40M,24M,20M,12M
 #define TCFG_HSB_CLK_DIV                    2                 //HSB_CLK = SYS_CLK / HSB_CLK_DIV
-#define TCFG_SFCTZ_CLK                      48000000          //SFC时钟，和加载代码的速度有关
+#define TCFG_SFCTZ_CLK                      96000000          //SFC时钟，和加载代码的速度有关
 #define TCFG_SDRAM_CLK                      200000000         //SDRAM/DDR时钟
 
 
@@ -50,12 +51,12 @@
 //*********************************************************************************//
 //                                  UART配置                                       //
 //*********************************************************************************//
-#define TCFG_DEBUG_PORT                     IO_PORTD_01
-#define TCFG_UBOOT_DEBUG_PORT               PD01
+#define TCFG_DEBUG_PORT                     IO_PORTB_00
+#define TCFG_UBOOT_DEBUG_PORT               PB00
 
 #define TCFG_UART0_ENABLE                   1              //UART0默认用来打印口
 #define TCFG_UART0_TX_IO                    TCFG_DEBUG_PORT
-#define TCFG_UART0_RX_IO                    IO_PORTE_11    //-1
+#define TCFG_UART0_RX_IO                    IO_PORTB_01
 #define TCFG_UART0_BAUDRATE                 1000000
 #define TCFG_UART0_PARITY                   UART_PARITY_DISABLE
 
@@ -63,7 +64,7 @@
 //*********************************************************************************//
 //                                  AD按键配置                                     //
 //*********************************************************************************//
-#define TCFG_ADKEY_ENABLE                   1              //AD按键
+#define TCFG_ADKEY_ENABLE                   0              //AD按键
 #define TCFG_ADKEY_INPUT_IO                 IO_PORTD_00
 #define TCFG_ADKEY_INPUT_CHANNEL            ADC_IO_CH_PD00
 
@@ -94,10 +95,10 @@
 //*********************************************************************************//
 //                                  IO按键配置                                     //
 //*********************************************************************************//
-#define TCFG_IOKEY_ENABLE                   0
+#define TCFG_IOKEY_ENABLE                   1
 #define TCFG_IOKEY_INPUT0_ENABLE            1
 #define TCFG_IOKEY_INPUT0_CONNECT_WAY       ONE_PORT_TO_LOW
-#define TCFG_IOKEY_INPUT0_IO                IO_PORTD_00
+#define TCFG_IOKEY_INPUT0_IO                IO_PORTD_08
 #define TCFG_IOKEY_INPUT0_VALUE             KEY_POWER
 #define TCFG_IOKEY_INPUT1_ENABLE            0
 #define TCFG_IOKEY_INPUT1_CONNECT_WAY       ONE_PORT_TO_LOW
@@ -123,8 +124,29 @@
 #define TCFG_LOWPOWER_OSC_TYPE              OSC_TYPE_LRC
 
 #define TCFG_LOWPOWER_WAKEUP_PORT0_ENABLE   1
-#define TCFG_LOWPOWER_WAKEUP_PORT0_IO       IO_PORTD_00
+#define TCFG_LOWPOWER_WAKEUP_PORT0_IO       IO_PORTD_08
 #define TCFG_LOWPOWER_WAKEUP_PORT0_EDGE     FALLING_EDGE
 #define TCFG_LOWPOWER_WAKEUP_PORT0_FILTER   PORT_FLT_DISABLE
+
+//*********************************************************************************//
+//                                  USB配置                                        //
+//*********************************************************************************//
+#define TCFG_FUSB_DEVICE                    BIT(0)
+#define TCFG_HUSB_DEVICE                    BIT(1)
+#define TCFG_USB_DEVICE                     TCFG_HUSB_DEVICE
+
+//*********************************************************************************//
+//                                USB从机配置                                      //
+//*********************************************************************************//
+#define TCFG_PC_ENABLE                      1              //使用USB从机功能一定要打开
+#define USB_PC_NO_APP_MODE                  0
+#define USB_MALLOC_ENABLE                   1
+#define USB_DEVICE_CLASS_CONFIG             0
+#define USB_DEVICE_CLASS_CONFIG_2_0         (AUDIO_CLASS | CUSTOM_HID_CLASS)
+#define TCFG_USB_SLAVE_AUDIO_SPK_ENABLE     1
+#define TCFG_USB_SLAVE_AUDIO_MIC_ENABLE     1
+
+#define TCFG_STATUS_LED_IO                  IO_PORTA_15
+#define TCFG_STATUS_LED_ACTIVE_LEVEL        1
 
 #endif

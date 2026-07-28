@@ -11,6 +11,7 @@
 // #define CONFIG_MEM_LEAK_CHECK_ENABLE         //是否启用内存泄漏检查(需要包含mem_leak_test.h头文件)
 #define CONFIG_DEBUG_ENABLE                     //打印开关
 #define CONFIG_CXX_SUPPORT                      //使能C++支持
+#define CONFIG_LZ4_COMPRESS_APP_CODE_ENABLE     //使用LZ4压缩代码
 
 
 //*********************************************************************************//
@@ -216,6 +217,20 @@
 #define TCFG_LEDC1_RST_TIME_CNT             20000
 #endif // USE_LEDC_TEST_DEMO
 
+//*********************************************************************************//
+//                                  EDR和BLE配置                                   //
+//*********************************************************************************//
+#ifdef CONFIG_BT_ENABLE
+
+#define TCFG_BT_MODE                            BT_NORMAL
+
+#define TCFG_POWER_ON_ENABLE_EMITTER            1   //开机自动打开发射器
+#define TCFG_POWER_ON_ENABLE_BLE                0   //开机自动打开BLE
+#define TCFG_USER_BT_CLASSIC_ENABLE             1   //经典蓝牙功能
+#define TCFG_USER_BLE_ENABLE                    0   //BLE功能使能
+#define TCFG_BT_DUAL_CONN_ENABLE                0   //经典蓝牙支持同时连接2台设备
+
+#endif
 
 #ifdef CONFIG_RELEASE_ENABLE
 #define LIB_DEBUG    0

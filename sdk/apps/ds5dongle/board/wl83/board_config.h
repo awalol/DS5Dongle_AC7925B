@@ -2,13 +2,13 @@
 #define BOARD_CONFIG_H
 
 //板子型号
-#define CONFIG_BOARD_DEMO
+#define CONFIG_BOARD_AC7925B_DONGLE
 
 //芯片型号sdram和flash配置文件
 #include "chip_cfg.h"
 
 //不同板子外设配置文件，如有新的板子，在这里同理添加
-#include "board_demo.h"
+#include "board_ac7925b_dongle.h"
 
 #ifdef CONFIG_NO_SDRAM_ENABLE
 #undef  __SDRAM_SIZE__
