@@ -11,7 +11,7 @@
 // #define CONFIG_MEM_LEAK_CHECK_ENABLE         //是否启用内存泄漏检查(需要包含mem_leak_test.h头文件)
 #define CONFIG_DEBUG_ENABLE                     //打印开关
 #define CONFIG_CXX_SUPPORT                      //使能C++支持
-#define CONFIG_LZ4_COMPRESS_APP_CODE_ENABLE     //使用LZ4压缩代码
+// #define CONFIG_LZ4_COMPRESS_APP_CODE_ENABLE     //使用LZ4压缩代码
 
 
 //*********************************************************************************//
@@ -218,17 +218,62 @@
 #endif // USE_LEDC_TEST_DEMO
 
 //*********************************************************************************//
-//                                  EDR和BLE配置                                   //
+//                    经典蓝牙手柄主机配置（不含 BLE/TWS）                   //
 //*********************************************************************************//
 #ifdef CONFIG_BT_ENABLE
 
 #define TCFG_BT_MODE                            BT_NORMAL
 
-#define TCFG_POWER_ON_ENABLE_EMITTER            1   //开机自动打开发射器
-#define TCFG_POWER_ON_ENABLE_BLE                0   //开机自动打开BLE
-#define TCFG_USER_BT_CLASSIC_ENABLE             1   //经典蓝牙功能
-#define TCFG_USER_BLE_ENABLE                    0   //BLE功能使能
-#define TCFG_BT_DUAL_CONN_ENABLE                0   //经典蓝牙支持同时连接2台设备
+/* 手柄是经典蓝牙 HID 设备；本机需要主动 Inquiry/Page，因此保留 emitter 主机能力。 */
+#define TCFG_POWER_ON_ENABLE_EMITTER            1
+#define TCFG_USER_EMITTER_ENABLE                1
+#define TCFG_BT_EMITTER_AUDIO_ENABLE            0
+#define TCFG_USER_BT_CLASSIC_ENABLE             1
+#define TCFG_BT_DUAL_CONN_ENABLE                0
+
+/* 明确关闭 BLE、LE Audio 和 TWS。 */
+#define TCFG_POWER_ON_ENABLE_BLE                0
+#define TCFG_USER_BLE_ENABLE                    0
+#define TCFG_TRANS_MULTI_BLE_SLAVE_NUMS         0
+#define TCFG_TRANS_MULTI_BLE_MASTER_NUMS        0
+#define TCFG_LE_AUDIO_APP_CONFIG                0
+#define TCFG_USER_TWS_ENABLE                    0
+#define TCFG_LOCAL_TWS_ENABLE                   0
+#define TCFG_TWS_AUTO_ROLE_SWITCH_ENABLE        0
+#define TCFG_TWS_POWER_BALANCE_ENABLE           0
+
+/* 为后续 HID Host 保留 Classic 基础链路，不注册本地音频/串口/HID Device Profile。 */
+#define TCFG_BT_SUPPORT_PROFILE_SPP             0
+#define TCFG_BT_SUPPORT_PROFILE_HFP             0
+#define TCFG_BT_SUPPORT_PROFILE_A2DP            0
+#define TCFG_BT_SUPPORT_PROFILE_AVCTP           0
+#define TCFG_BT_SUPPORT_PROFILE_HID             0
+#define TCFG_BT_SUPPORT_PROFILE_PNP             0
+#define TCFG_BT_SUPPORT_PROFILE_PBAP            0
+#define TCFG_BT_SUPPORT_PROFILE_PAN             0
+#define TCFG_BT_SUPPORT_PROFILE_MAP             0
+#define TCFG_BT_SUPPORT_PROFILE_HFP_AG          0
+#define TCFG_BT_SUPPORT_PROFILE_BIP             0
+#define TCFG_BT_SUPPORT_PROFILE_OPP             0
+#define TCFG_BT_SUPPORT_PROFILE_IAP             0
+#define TCFG_BT_SUPPORT_PROFILE_HSP             0
+#define TCFG_BT_PROFILE_HID_CHANGE_DESCRIPTOR   0
+
+#define TCFG_BT_SUPPORT_AAC                     0
+#define TCFG_BT_SUPPORT_MSBC                    0
+#define TCFG_BT_SUPPORT_LDAC                    0
+#define TCFG_BT_SUPPORT_LHDC                    0
+#define TCFG_BT_SUPPORT_LHDC_V5                 0
+#define TCFG_BT_SUPPORT_MUSIC_VOL_SYNC          0
+#define TCFG_BT_VOL_SYNC_ENABLE                 0
+#define TCFG_SUPPORT_DUAL_A2DP_SOURCE           0
+
+/* 关闭测试和第三方 BLE 协议选项。 */
+#define TCFG_BT_BQB_PROFILE_TEST_ENABLE         0
+#define TCFG_RF_FCC_TEST_ENABLE                 0
+#define TCFG_RF_PRODUCT_TEST_ENABLE             0
+#define THIRD_PARTY_PROTOCOLS_SEL               0
+#define RCSP_MODE                               0
 
 #endif
 
@@ -241,4 +286,3 @@
 
 
 #endif ///< APP_CONFIG_H
-

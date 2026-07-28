@@ -8,6 +8,21 @@
 
 // *INDENT-OFF*
 
+#ifdef CONFIG_BT_ENABLE
+/* WiFi/BT 共用 2.4 GHz RF 校准配置；关闭 WiFi 时蓝牙控制器仍需要该符号。 */
+#include "wifi/wifi_connect.h"
+const struct wifi_calibration_param wifi_calibration_param = {
+    .xosc_l       = 0x7,
+    .xosc_r       = 0x7,
+    .pa_trim_data = {1, 7, 4, 7, 11, 1, 7},
+    .mcs_dgain    = {
+        50, 50, 50, 50,
+        72, 72, 85, 80, 64, 64, 62, 52,
+        72, 90, 80, 64, 64, 64, 50, 43,
+    },
+};
+#endif
+
 #if TCFG_UART0_ENABLE
 UART0_PLATFORM_DATA_BEGIN(uart0_data)
 #ifdef CONFIG_DEBUG_ENABLE

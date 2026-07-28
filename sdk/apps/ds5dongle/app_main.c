@@ -1,7 +1,10 @@
 #include "app_config.h"
 #include "system/includes.h"
+#include "app_core.h"
 #include "event/key_event.h"
 #include "asm/power_interface.h"
+
+extern int bt_event_handler(struct sys_event *event);
 
 /*中断列表 */
 const struct irq_info irq_info_table[] = {
@@ -21,6 +24,9 @@ const struct task_info task_info_table[] = {
     {"sys_event",           29,     512,	   0 },
     {"systimer",            14,     256, 	   0 },
     {"sys_timer",            9,     512,	  128 },
+    {"btencry",             14,     512,      128 },
+    {"btctrler",            19,     512,      384 },
+    {"btstack",             18,     768,      384 },
 
     {0, 0, 0, 0, 0},
 };
@@ -31,19 +37,8 @@ static int key_long(struct key_event *key)
     switch (key->value) {
     case KEY_POWER:
         printf("KEY_POWER LONG\n");
-        power_set_soft_poweroff(0);
-        break;
-    case KEY_MODE:
-        printf("KEY_MODE LONG\n");
-        break;
-    case KEY_UP:
-        printf("KEY_UP LONG\n");
-        break;
-    case KEY_DOWN:
-        printf("KEY_DOWN LONG\n");
-        break;
-    case KEY_OK:
-        printf("KEY_OK LONG\n");
+        extern void go_mask_usb_updata(void);
+        go_mask_usb_updata();
         break;
     default:
         break;
@@ -56,18 +51,6 @@ static int key_click(struct key_event *key)
     switch (key->value) {
     case KEY_POWER:
         printf("KEY_POWER\n");
-        break;
-    case KEY_MODE:
-        printf("KEY_MODE\n");
-        break;
-    case KEY_UP:
-        printf("KEY_UP\n");
-        break;
-    case KEY_DOWN:
-        printf("KEY_DOWN\n");
-        break;
-    case KEY_OK:
-        printf("KEY_OK\n");
         break;
     default:
         break;
@@ -117,6 +100,7 @@ void app_default_event_handler(struct sys_event *event)
     case SYS_NET_EVENT:
         break;
     case SYS_BT_EVENT:
+        bt_event_handler(event);
         break;
     default:
         ASSERT(0, "unknow event type: %s\n", __func__);
@@ -138,6 +122,10 @@ void app_main(void)
 {
     printf("\n\n\n ------------ds5dongle run %s-------------\n\n\n", __TIME__);
 
+    struct intent it;
+    init_intent(&it);
+    it.name = "bt";
+    start_app(&it);
+
     os_task_create(ds5dongle_task, NULL, 10, 1000, 0, "ds5dongle_task");
 }
-

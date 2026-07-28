@@ -142,7 +142,13 @@ INCLUDES := \
 	-I../../../../include_lib/utils \
 	-I../../../../include_lib/utils/syscfg \
 	-I../../../../include_lib/utils/event \
+	-I../../../../include_lib/net \
+	-I../../../../include_lib/btstack \
 	-I../../../../apps \
+	-I../../../../apps/common \
+	-I../../../../apps/common/include \
+	-I../../../../apps/common/config/include \
+	-I../../../../apps/common/usb \
 	-I../../../../apps/ds5dongle/include \
 	-I../../../../apps/ds5dongle/board/wl83 \
 	-I../../../../include_lib/system/os \
@@ -155,6 +161,10 @@ INCLUDES := \
 # 需要编译的 .c 文件
 c_SRC_FILES := \
 	../../../../apps/common/c++/cpp_run_init.c \
+	../../../../apps/common/config/bt_profile_config.c \
+	../../../../apps/common/config/log_config/app_config.c \
+	../../../../apps/common/config/log_config/lib_btctrler_config.c \
+	../../../../apps/common/config/log_config/lib_btstack_config.c \
 	../../../../apps/common/config/log_config/lib_driver_config.c \
 	../../../../apps/common/config/log_config/lib_power_config.c \
 	../../../../apps/common/config/log_config/lib_system_config.c \
@@ -209,6 +219,7 @@ c_SRC_FILES := \
 	../../../../apps/common/key/tent600_key.c \
 	../../../../apps/common/key/touch_key.c \
 	../../../../apps/common/key/uart_key.c \
+	../../../../apps/common/net/wifi_conf.c \
 	../../../../apps/common/system/init.c \
 	../../../../apps/common/system/init_expand.c \
 	../../../../apps/common/system/mem_mmu.c \
@@ -222,14 +233,20 @@ c_SRC_FILES := \
 	../../../../cpu/wl83/debug.c \
 	../../../../cpu/wl83/debug_exception.c \
 	../../../../cpu/wl83/setup.c \
+	../../../../apps/common/usb/device/msd_upgrade.c \
+	../../../../apps/ds5dongle/bt.c \
 
 
 # 需要编译的 .S 文件
 S_SRC_FILES := \
+	../../../../include_lib/btctrler/version.z.S \
+	../../../../include_lib/btstack/version.z.S \
 	../../../../include_lib/driver/version.z.S \
+	../../../../include_lib/net/version.z.S \
 	../../../../include_lib/system/version.z.S \
 	../../../../include_lib/update/version.z.S \
 	../../../../include_lib/utils/version.z.S \
+	../../../../lib/net/version.z.S \
 	../../../../lib/utils/version.z.S \
 
 
@@ -285,6 +302,11 @@ LFLAGS := \
 	../../../../cpu/wl83/liba/cfg_tool.a \
 	../../../../cpu/wl83/liba/fs.a \
 	../../../../cpu/wl83/liba/common_lib.a \
+	../../../../cpu/wl83/liba/wl_rf_common.a \
+	../../../../cpu/wl83/liba/btctrler.a \
+	../../../../cpu/wl83/liba/btstack.a \
+	../../../../cpu/wl83/liba/crypto_toolbox_Osize.a \
+	../../../../cpu/wl83/liba/lib_ccm_aes.a \
 	../../../../cpu/wl83/liba/update.a \
 	--end-group \
 	../../../../include_lib/c++/libstdc++/ucos/libemutls.a \

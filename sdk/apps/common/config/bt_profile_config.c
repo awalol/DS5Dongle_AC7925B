@@ -227,6 +227,11 @@ const u8 more_avctp_cmd_support = 1;
 const u8 hci_inquiry_support = 1;
 const u8 btstack_emitter_support = 1;
 
+#ifndef TCFG_BT_EMITTER_AUDIO_ENABLE
+#define TCFG_BT_EMITTER_AUDIO_ENABLE 1
+#endif
+
+#if TCFG_BT_EMITTER_AUDIO_ENABLE
 #if TCFG_BT_SUPPORT_PROFILE_A2DP
 const u8 emitter_hfp_hf_support = 0;    /*置1时做发射器连接手机时只支持hfp*/
 #else
@@ -243,6 +248,10 @@ SDP_RECORD_HANDLER_REGISTER(a2dp_src_sdp_record_item) = {
     .service_record = (u8 *)sdp_a2dp_source_service_data,
     .service_record_handle =  0x0001000B,
 };
+#else
+/* 只使用 Classic Inquiry/Page，不注册 A2DP Source 服务。 */
+const u8 emitter_hfp_hf_support = 0;
+#endif
 
 #if (TCFG_BT_SUPPORT_PROFILE_HFP_AG==1)
 extern const u8 sdp_hfp_ag_service_data[];
