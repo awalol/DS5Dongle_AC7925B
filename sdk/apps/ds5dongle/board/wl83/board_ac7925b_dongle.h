@@ -4,6 +4,7 @@
 //                                功能模块配置                                     //
 //*********************************************************************************//
 #define CONFIG_SFC_ENABLE
+#define CONFIG_BT_ENABLE
 #define CONFIG_NO_SDRAM_ENABLE
 
 
