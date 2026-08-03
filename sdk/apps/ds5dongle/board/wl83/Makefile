@@ -235,6 +235,7 @@ c_SRC_FILES := \
 	../../../../cpu/wl83/setup.c \
 	../../../../apps/common/usb/device/msd_upgrade.c \
 	../../../../apps/ds5dongle/bt.c \
+	../../../../apps/ds5dongle/ibtstack.c \
 
 
 # 需要编译的 .S 文件

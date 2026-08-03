@@ -202,11 +202,15 @@
 <Unit filename="../../../../apps/common/system/version.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/update/update.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/ds5dongle/app_main.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../apps/ds5dongle/bt.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../apps/ds5dongle/ibtstack.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/ds5dongle/board/wl83/board.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/ds5dongle/board/wl83/board_config.h" />
 <Unit filename="../../../../apps/ds5dongle/board/wl83/board_demo.h" />
 <Unit filename="../../../../apps/ds5dongle/board/wl83/chip_cfg.h" />
 <Unit filename="../../../../apps/ds5dongle/include/app_config.h" />
+<Unit filename="../../../../apps/ds5dongle/include/bt.h" />
+<Unit filename="../../../../apps/ds5dongle/include/ibtstack.h" />
 <Unit filename="../../../../cpu/wl83/adc_api.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../cpu/wl83/debug.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../cpu/wl83/debug_exception.c"><Option compilerVer="CC"/></Unit>

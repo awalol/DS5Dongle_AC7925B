@@ -17,3 +17,8 @@ CompileFlags:
     - -D__ELF__
     - -D__SHELL__
     - -fms-extensions
+    - -I/Users/awalol/Code/fw-AC792_SDK/sdk/include_lib
+    - -I/Users/awalol/Code/fw-AC792_SDK/sdk/include_lib/utils
+    - -I/Users/awalol/Code/fw-AC792_SDK/sdk/include_lib/btstack
+    - -I/Users/awalol/Code/fw-AC792_SDK/sdk/apps/ds5dongle/include
+    - -I/Users/awalol/Code/fw-AC792_SDK/sdk/apps/ds5dongle/board/wl83
