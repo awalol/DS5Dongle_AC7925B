@@ -263,8 +263,8 @@ static void bt_read_remote_name(u8 status, u8 *addr, u8 *name) {
 }
 
 static int bt_init(void) {
-    extern void bt_ble_module_init(void);
-    bt_ble_module_init();
+    // extern void bt_ble_module_init(void);
+    // bt_ble_module_init();
 
     bt_set_user_ctrl_conn_num(1);
 

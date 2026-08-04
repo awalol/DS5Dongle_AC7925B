@@ -1,4 +1,11 @@
+# Jieli's Clang 4 has a private "pi32v2" backend.  CLion's bundled clangd
+# does not know that target, so use adjusted i386 only as an ABI surrogate.
+# This does not change the compiler or target used by the Makefiles.
 CompileFlags:
+  # Force GNU-style Clang option parsing rather than clang-cl parsing.
+  Compiler: clang
+
+  # Drop options that only Jieli's patched Clang understands.
   Remove:
     - -target
     - --target=*
@@ -7,18 +14,44 @@ CompileFlags:
     - -mllvm
     - -fallow-pointer-null
     - -fprefer-gnu-section
+
   Add:
+    # PI32v2 is 32-bit little-endian and aligns i64/double to 4 bytes.
+    # -mlong-double-64 corrects i386's remaining scalar ABI difference.
     - --target=i386-unknown-elf
-    - -DSUPPORT_MS_EXTENSIONS
-    - -DCONFIG_RELEASE_ENABLE
-    - -DCONFIG_CPU_WL83
-    - -D__GCC_PI32V2__
-    - -D__PI32V2__
-    - -D__ELF__
-    - -D__SHELL__
-    - -fms-extensions
-    - -I/Users/awalol/Code/fw-AC792_SDK/sdk/include_lib
-    - -I/Users/awalol/Code/fw-AC792_SDK/sdk/include_lib/utils
-    - -I/Users/awalol/Code/fw-AC792_SDK/sdk/include_lib/btstack
-    - -I/Users/awalol/Code/fw-AC792_SDK/sdk/apps/ds5dongle/include
-    - -I/Users/awalol/Code/fw-AC792_SDK/sdk/apps/ds5dongle/board/wl83
+    - -march=i386
+    - -mlong-double-64
+
+    # CLion's standalone clangd package has no bundled resource headers here;
+    # use the headers shipped with the actual Jieli compiler.
+    - -isystemC:/JL/pi32/lib/clang/4.0.1/include
+
+    # The surrogate architecture must not select x86-specific SDK paths.
+    - -Ui386
+    - -U__i386
+    - -U__i386__
+    - -U__tune_i386__
+    - -U__code_model_small__
+
+    - -U__BIGGEST_ALIGNMENT__
+    - -D__BIGGEST_ALIGNMENT__=4
+
+    # Match the PI32v2 predefined ABI types used by the bundled newlib.
+    - -U__SIZE_TYPE__
+    - "-D__SIZE_TYPE__=long unsigned int"
+    - -U__PTRDIFF_TYPE__
+    - "-D__PTRDIFF_TYPE__=long int"
+    - -U__INTPTR_TYPE__
+    - "-D__INTPTR_TYPE__=long int"
+    - -U__UINTPTR_TYPE__
+    - "-D__UINTPTR_TYPE__=long unsigned int"
+    - -U__SIZE_MAX__
+    - -D__SIZE_MAX__=4294967295UL
+    - -U__PTRDIFF_MAX__
+    - -D__PTRDIFF_MAX__=2147483647L
+    - -U__INTPTR_MAX__
+    - -D__INTPTR_MAX__=2147483647L
+    - -U__UINTPTR_MAX__
+    - -D__UINTPTR_MAX__=4294967295UL
+    # Real PI32v2 builtin; project-specific CONFIG_* macros come from Make.
+    - -D__PI32V2__=1
