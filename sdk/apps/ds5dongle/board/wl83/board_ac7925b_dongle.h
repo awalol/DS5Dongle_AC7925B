@@ -57,7 +57,7 @@
 #define TCFG_UART0_ENABLE                   1              //UART0默认用来打印口
 #define TCFG_UART0_TX_IO                    TCFG_DEBUG_PORT
 #define TCFG_UART0_RX_IO                    IO_PORTB_01
-#define TCFG_UART0_BAUDRATE                 1000000
+#define TCFG_UART0_BAUDRATE                 115200
 #define TCFG_UART0_PARITY                   UART_PARITY_DISABLE
 
 
