@@ -20,11 +20,11 @@ typedef enum {
     UPGRADE_UART_KEY,
 } UPGRADE_STATE;
 
-/*extern void nvram_set_boot_state(u32 state);*/
+extern void nvram_set_boot_state(u32 state);
 /*extern void hw_mmu_disable(void);*/
 /*extern void ram_protect_close(void);*/
 
-void __attribute__((weak)) nvram_set_boot_state(u32 state) {}
+// void __attribute__((weak)) nvram_set_boot_state(u32 state) {}
 void __attribute__((weak)) hw_mmu_disable(void) {}
 void __attribute__((weak)) ram_protect_close(void) {}
 
