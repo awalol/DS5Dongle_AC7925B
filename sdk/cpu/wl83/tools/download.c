@@ -219,6 +219,10 @@ EXFLASH_FILES="-ex_flash exres.bin"
 
 
 
+#if !defined CONFIG_SDFILE_EXT_ENABLE
+rm -f jl_isd.fw jl_isd.ufw
+#endif
+
 #if defined CONFIG_SDFILE_EXT_ENABLE
     "${FAT_IMAGE_TOOL}" CONFIG_SDNAND_HFAT_LEN_TEXT \
                         --sectors-per-cluster \
@@ -246,12 +250,14 @@ EXFLASH_FILES="-ex_flash exres.bin"
 
 #elif defined CONFIG_SFC_ENABLE || !defined CONFIG_LZ4_COMPRESS_APP_CODE_ENABLE
 
-    sudo "${ISD_DOWNLOAD}" isd_config.ini \
+    "${ISD_DOWNLOAD}" isd_config.ini \
+                      -package-only \
                       -gen2 -tonorflash -dev wl83 -boot 0x103000 \
-                      -div1 -wait 300 -uboot uboot.boot -app app.bin cfg_tool.bin \
+                      -div1 -uboot uboot.boot -app app.bin cfg_tool.bin \
                       -res "${AUDIO_RES}" "${UI_RES}" cfg "${MEDIA_RES}" \
-                      -reboot 50 "${UPDATE_FILES}" \
+                      "${UPDATE_FILES}" \
                       -extend-bin "${EXFLASH_FILES}" \
+                      -output-fw jl_isd.fw \
                       -output-ufw jl_isd.ufw
 #else
 
@@ -262,17 +268,36 @@ mask_addr="0xf0000"
 rm -f rom.image
     "${UBOOT_LZ4}" app.bin app.lz4 \
                    "${run_addr}" "${load_addr}" rom.image "${mask_addr}"
-    sudo "${ISD_DOWNLOAD}" isd_config.ini \
+    "${ISD_DOWNLOAD}" isd_config.ini \
+                      -package-only \
                       -gen2 -tonorflash -dev wl83 -boot 0x103000 \
-                      -div1 -wait 300 -uboot uboot.boot -app app.lz4 cfg_tool.bin \
+                      -div1 -uboot uboot.boot -app app.lz4 cfg_tool.bin \
                       -res "${AUDIO_RES}" "${UI_RES}" cfg "${MEDIA_RES}" \
-                      -reboot 50 "${UPDATE_FILES}" \
+                      "${UPDATE_FILES}" \
                       -extend-bin "${EXFLASH_FILES}" \
+                      -output-fw jl_isd.fw \
                       -output-ufw jl_isd.ufw
 #endif
 
+#if !defined CONFIG_SDFILE_EXT_ENABLE
+package_status=$?
+if [ "${package_status}" -ne 0 ]; then
+    echo "固件打包失败，isd_download 返回：${package_status}" >&2
+    exit "${package_status}"
+fi
+
+if [ ! -s jl_isd.fw ] || [ ! -s jl_isd.ufw ]; then
+    echo "固件打包失败：jl_isd.fw 或 jl_isd.ufw 未生成" >&2
+    exit 12
+fi
+
+echo "固件生成成功："
+echo "  ${DOWNLOAD_DIR}/jl_isd.fw"
+echo "  ${DOWNLOAD_DIR}/jl_isd.ufw"
+#endif
+
 #if defined(CONFIG_DOUBLE_BANK_ENABLE) && defined(CONFIG_UPDATE_COMPRESS)
-sudo "${ISD_DOWNLOAD}" -make-upgrade-bin -ufw jl_isd.ufw -output db_update.bin
+"${ISD_DOWNLOAD}" -make-upgrade-bin -ufw jl_isd.ufw -output db_update.bin
 #endif
 
 
@@ -565,5 +590,4 @@ exit /b 0
 
 #endif
 // *INDENT-ON*
-
 

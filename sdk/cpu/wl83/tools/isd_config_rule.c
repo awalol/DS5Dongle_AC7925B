@@ -311,7 +311,19 @@ EX_SDCARD=SD_1_0_2_1_24;
 BTBOX_MIN_VER=1.2.4.f;
 //###########################################
 
-#if defined(CONFIG_DOUBLE_BANK_ENABLE) && defined(CONFIG_UPDATE_COMPRESS)
+#ifdef __SHELL__
+[FW_ADDITIONAL]
+    #if !defined CONFIG_DOUBLE_BANK_ENABLE
+FILE_LIST=(file=ota.bin:type=100),\
+          (file=version.ver),\
+          (file=script.ver);
+    #elif defined CONFIG_UPDATE_COMPRESS
+FILE_LIST=(file=ota.bin:type=100),\
+          (file=script.ver);
+    #else
+FILE_LIST=(file=script.ver);
+    #endif
+#elif defined(CONFIG_DOUBLE_BANK_ENABLE) && defined(CONFIG_UPDATE_COMPRESS)
 [FW_ADDITIONAL]
 FILE_LIST=(file=ota.bin:type=100);
 #endif
@@ -474,4 +486,3 @@ SIZE=32;
 AREA_SIZE=0;
 BLOCK_SIZE=65536;
 #endif
-
