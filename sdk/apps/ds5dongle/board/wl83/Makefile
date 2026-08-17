@@ -309,6 +309,8 @@ LFLAGS := \
 	../../../../cpu/wl83/liba/crypto_toolbox_Osize.a \
 	../../../../cpu/wl83/liba/lib_ccm_aes.a \
 	../../../../cpu/wl83/liba/update.a \
+	../../../../cpu/wl83/liba/libopus.a \
+	../../../../cpu/wl83/liba/libwdl_resampler.a \
 	--end-group \
 	../../../../include_lib/c++/libstdc++/ucos/libemutls.a \
 	../../../../include_lib/c++/libstdc++/ucos/libc++.a \
