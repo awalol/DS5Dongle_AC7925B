@@ -23,9 +23,9 @@ const struct task_info task_info_table[] = {
     {"sys_event",           29,     512,	   0 },
     {"systimer",            14,     256, 	   0 },
     {"sys_timer",            9,     512,	  128 },
-    // {"btencry",             14,     512,      128 },
-    // {"btctrler",            19,     512,      384 },
-    // {"btstack",             18,     768,      384 },
+    {"btencry",             14,     512,      128 },
+    {"btctrler",            19,     512,      384 },
+    {"btstack",             18,     768,      384 },
 
     {0, 0, 0, 0, 0},
 };
@@ -122,10 +122,10 @@ void app_main(void)
 {
     printf("\n\n\n ------------ds5dongle run %s-------------\n\n\n", __TIME__);
 
-    // struct intent it;
-    // init_intent(&it);
-    // it.name = "bt";
-    // start_app(&it);
+    struct intent it;
+    init_intent(&it);
+    it.name = "bt";
+    start_app(&it);
 
     os_task_create(ds5dongle_task, NULL, 10, 1000, 0, "ds5dongle_task");
 }

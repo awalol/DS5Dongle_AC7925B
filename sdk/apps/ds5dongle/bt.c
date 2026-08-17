@@ -263,9 +263,6 @@ static void bt_read_remote_name(u8 status, u8 *addr, u8 *name) {
 }
 
 static int bt_init(void) {
-    // extern void bt_ble_module_init(void);
-    // bt_ble_module_init();
-
     bt_set_user_ctrl_conn_num(1);
 
     bt_set_page_timeout_value(8000);
@@ -276,6 +273,8 @@ static int bt_init(void) {
 
     bt_read_remote_name_handle_register(bt_read_remote_name);
     bt_emitter_set_enable_flag(1);
+
+    bt_change_hci_class_type(BD_CLASS_REMOTE_CONTROL);
 
     log_info("btstack init");
     return btstack_init();
@@ -356,6 +355,7 @@ static int bt_hci_event_handler(void *evt) {
     return FALSE;
 }
 
+// 在 app_main.c 的 app_default_event_handler 被调用
 int bt_event_handler(struct sys_event *event) {
     switch (event->from) {
         case BT_EVENT_FROM_CON:
