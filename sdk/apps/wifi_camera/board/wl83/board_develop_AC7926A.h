@@ -690,11 +690,11 @@
 
 #if TCFG_EXT_WIFI_ENABLE
 #define TCFG_RTL8189E_ENABLE                0
-#define TCFG_RTL8189F_ENABLE                0
+#define TCFG_RTL8189F_ENABLE                1
 #define TCFG_RTL8822ES_10M_ENABLE           0
 #define TCFG_RTL8822CS_ENABLE               0
 #define TCFG_RTL8733BS_ENABLE               0
-#define TCFG_AIC8800_ENABLE					1
+#define TCFG_AIC8800_ENABLE				    0
 #endif
 
 

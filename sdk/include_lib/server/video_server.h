@@ -305,6 +305,7 @@ struct vs_image_capture {
     u8 linear_scale;		// 线性插值标志
     u16 src_w;
     u16 src_h;
+    u8 double_raw;                  //双RAW(两路sensor共用ISP)抓拍:1是
 };
 
 #define  SET_CAMERA_MODE        BIT(0)

@@ -240,8 +240,8 @@
 <Add option="../../../../cpu/wl83/liba/crypto_toolbox_Osize.a" />
 <Add option="../../../../cpu/wl83/liba/wl_wifi.a" />
 <Add option="../../../../cpu/wl83/liba/wpasupplicant.a" />
-<Add option="../../../../cpu/wl83/liba/wl_rf_common.a" />
 <Add option="../../../../cpu/wl83/liba/libcrypto_mbedtls.a" />
+<Add option="../../../../cpu/wl83/liba/wl_rf_common.a" />
 <Add option="../../../../cpu/wl83/liba/hsm.a" />
 <Add option="../../../../cpu/wl83/liba/lte_module.a" />
 <Add option="../../../../cpu/wl83/liba/profile.a" />

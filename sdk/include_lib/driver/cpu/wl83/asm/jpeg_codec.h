@@ -237,6 +237,19 @@ struct jpeg_codec_handle {
 
 #define jpg_be16_to_cpu(x) (((x)[0] << 8) | (x)[1])
 
+/* JPEG SOF 帧头标记类型 */
+#define JPEG_SOF0_BASELINE     0xC0   /* 基线 DCT，硬件支持 */
+#define JPEG_SOF1_EXT_SEQ      0xC1   /* 扩展顺序 DCT */
+#define JPEG_SOF2_PROGRESSIVE  0xC2   /* 渐进式 DCT，硬件不支持 */
+#define JPEG_SOF3_LOSSLESS     0xC3   /* 无损，硬件不支持 */
+
+/* JPEG 格式错误码 */
+#define JPEG_ERR_PROGRESSIVE   (-0x1001)   /* 渐进式 JPEG，不支持 */
+#define JPEG_ERR_LOSSLESS      (-0x1002)   /* 无损 JPEG，不支持 */
+
+/* 探测 JPEG 码流的 SOF 帧头类型。
+ * 返回 0xC0/0xC1/0xC2/0xC3；非 JPEG / 数据非法 / 未找到 SOF 返回 0 */
+int jpeg_get_sof_marker(u8 *stream, int len);
 
 int jpeg_codec_init(void);
 /*
@@ -296,7 +309,7 @@ int mjpg_dri_enc_start(void *_fh, struct YUV_frame_data *input_frame, u8 *bits_b
  */
 u8 *find_jpg_frame(u8 *buf, int limit);
 u8 *find_jpg_frame_detail(u8 *buf, int limit, struct jpeg_basic_info *info);
-void *jpeg_decode_open(void *arg);
+void *jpeg_decode_open(void *arg, int id);
 int jpeg_decode_reset_param(void *fd, void *arg);
 int jpeg_decode_close(void *fd);
 int jpeg_decode_reset(void *fd, void *arg);

@@ -1,5 +1,6 @@
 #include "pipeline_core.h"
 #include "message_event.h"
+#include "video/video_ioctl.h"
 #include "sock_api/sock_api.h"
 #include "app_config.h"
 #include "server/rt_stream_pkg.h"
@@ -390,14 +391,10 @@ static void statistic_socket_fps(void *priv)
 
 static void scr_recv_task(void *priv)
 {
-    buffer_meta_t *buffer_meta = NULL;
-
     int finish_flag = -1;
     int recv_len = 0;
 
     pipe_plugin_t *plugin = (pipe_plugin_t *)priv;
-    //目前只考虑单端点的情况
-    buffer_t *buffer = port_get_output_endpoint(plugin->port, 0)->data_buffer;
 
     struct scr_handle *hdl = (struct scr_handle *)plugin->private_data;
 
@@ -470,32 +467,19 @@ static void scr_recv_task(void *priv)
         if (!finish_flag) {
             hdl->jpg_size = jpg->buf_len;
 
-            buffer_meta = buffer->get_write_addr(buffer, jpg->buf_len);
-            if (!buffer_meta) {
-                log_warn("%s: next moudle buffer no enough. free_len: %d, need_len: %d", __func__, buffer->get_free_size(buffer), jpg->buf_len);
-                do {
-                    buffer_meta = buffer->read_data(buffer, BUFFER_NO_WAIT);
-                    buffer->free_read_data(buffer, buffer_meta);
-                } while (buffer->get_free_size(buffer) < jpg->buf_len);
+            //根据规则发送回包
+            if (hdl->ack_cb && hdl->socket_type != SOCK_STREAM) {  //net_scr_ack_func
+                hdl->ack_cb(hdl->seq);
+            }
+            //行解码模式(SET_BUFFER_LINE)下jpeg_dec不创建消费任务,
+            //与uvc/virtual源一致, 直接消息驱动jpeg_dec在本线程同步解一帧,
+            //解码输出每line_cnt行经REP_BUF_NOTIFY联动rep搬运给imc显示
+            struct video_buffer b = {0};
+            b.baddr = (u32)jpg->buf;
+            b.len   = jpg->buf_len;
+            message_request(plugin->port, JPEG_DEC_ONE_FRAME | MESSAGE_NEXT, (void *)&b);
+            hdl->disp_fps++;
 
-                buffer_meta = buffer->get_write_addr(buffer, jpg->buf_len);
-                ASSERT(buffer_meta);
-            }
-            if (buffer_meta) {
-                //根据规则发送回包
-                if (hdl->ack_cb && hdl->socket_type != SOCK_STREAM) {  //net_scr_ack_func
-                    hdl->ack_cb(hdl->seq);
-                }
-                if (buffer->type == EXTERN_BUFFER) {
-                    memcpy(buffer_meta->ext_data, jpg->buf, jpg->buf_len);
-                } else {
-                    memcpy(buffer_meta->data, jpg->buf, jpg->buf_len);
-                }
-                buffer_meta->data_len = jpg->buf_len;
-                buffer->update_data(buffer, buffer_meta);
-                hdl->disp_fps++;
-            }
-            buffer_meta = NULL;
             finish_flag = -1;
             hdl->sock_fps++;
         }

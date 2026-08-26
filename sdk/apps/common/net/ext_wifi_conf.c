@@ -421,5 +421,10 @@ void set_rtw_cache_efuse_power_index(void)
 
 #endif
 
+__attribute__((weak)) int wf_low_power_get_sleeping_status(void)
+{
+    return 0;
+}
+
 #endif
 

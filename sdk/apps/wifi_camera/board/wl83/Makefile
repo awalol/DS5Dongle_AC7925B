@@ -1388,8 +1388,8 @@ LFLAGS := \
 	../../../../cpu/wl83/liba/crypto_toolbox_Osize.a \
 	../../../../cpu/wl83/liba/wl_wifi.a \
 	../../../../cpu/wl83/liba/wpasupplicant.a \
-	../../../../cpu/wl83/liba/wl_rf_common.a \
 	../../../../cpu/wl83/liba/libcrypto_mbedtls.a \
+	../../../../cpu/wl83/liba/wl_rf_common.a \
 	../../../../cpu/wl83/liba/hsm.a \
 	../../../../cpu/wl83/liba/lte_module.a \
 	../../../../cpu/wl83/liba/profile.a \

@@ -69,4 +69,4 @@ static int c_main(void)
     os_task_create(flash_ex_sdfile_test, NULL, 12, 1000, 0, "flash_ex_sdfile_test");
     return 0;
 }
-late_initcall(c_main);
+/* late_initcall(c_main); */

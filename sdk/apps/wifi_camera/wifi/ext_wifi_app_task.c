@@ -270,7 +270,7 @@ static void wifi_set_lan_setting_info(void)
     dev_ioctl(wifi_dev, DEV_SET_LAN_SETTING, (u32)&info);
 }
 
-#if 1
+#if !TCFG_WIFI_ENABLE
 void net_app_init(void)
 {
 #ifdef CONFIG_MASS_PRODUCTION_ENABLE
@@ -414,7 +414,10 @@ static void ext_wifi_app_task(void *priv)
 #if !IP_NAPT_EXT || !TCFG_LTE_PHY_ENABLE
     ext_wifi_on();
 #endif
+
+#if !TCFG_WIFI_ENABLE
     net_app_init();
+#endif
 
     sys_timer_add(NULL, wifi_app_timer_func, 1000);
 
@@ -476,6 +479,7 @@ static int ext_wireless_net_init(void)//主要是create wifi 线程的
 }
 late_initcall(ext_wireless_net_init);
 
+#if !TCFG_WIFI_ENABLE
 const char *get_rec_path_0()
 {
     return NULL;
@@ -492,6 +496,7 @@ const char *get_rec_path_3()
 {
     return CONFIG_REC_PATH_2;
 }
+#endif
 
 
 //sdio驱动底层调用接口
