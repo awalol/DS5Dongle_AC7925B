@@ -369,6 +369,12 @@ const int MIDI_DEC_SR = 44100;     //输出采样率配置
 const int config_msbc_decode_input_frame_replace = CONFIG_MSBC_INPUT_FRAME_REPLACE_DISABLE;
 const int config_msbc_encode_used_software_enable = 1;  //使用msbc软件编码
 
+//***********************
+//*     DSD Codec     *
+//***********************
+const float config_dsd_decode_output_gain = 1.0f;
+const int config_dsd_decode_output_chunk = 128;
+
 ////////////////////ID3信息使能/////////////////
 const int config_flac_id3_enable = 0;
 const int config_ape_id3_enable  = 0;

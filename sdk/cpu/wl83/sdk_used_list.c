@@ -99,6 +99,9 @@ midi_dec_plug
 #if TCFG_DEC_MIDI_CTRL_ENABLE
 midi_ctrl_dec_plug
 #endif
+#if TCFG_DEC_DSD_ENABLE
+dsd_dec_plug
+#endif
 #if (TCFG_LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA_LW)
 #if (TCFG_KBOX_1T3_MODE_EN == 0)
 jla_lw_encoder_plug
@@ -116,7 +119,7 @@ jla_v2_enc_plug
 jla_dec_plug
 jla_encoder_plug
 #endif
-#if defined TCFG_LE_AUDIO_APP_CONFIG && (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+#if (defined TCFG_LE_AUDIO_APP_CONFIG && (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))) || (TCFG_ENC_LC3_ENABLE) || (TCFG_DEC_LC3_ENABLE)
 lc3_dec_plug
 lc3_encoder_plug
 #endif

@@ -463,6 +463,8 @@ typedef enum {
     BT_STATUS_CALL_MIC_VOL_CHANGE,
     BT_STATUS_THIRD_CONNECTED,        /*第三台连接成功*/
     BT_STATUS_THIRD_DISCONNECT,        /*第三台断开连接*/
+    BT_STATUS_CONN_HCRP_CH,
+    BT_STATUS_DISCONN_HCRP_CH,
 } STATUS_FOR_USER;
 
 typedef enum {
@@ -780,6 +782,8 @@ extern void bt_change_hci_class_type(u32 class);
 #define BD_CLASS_REMOTE_CONTROL     0x00254C
 
 #define BD_CLASS_TRANSFER_HEALTH    0x10091C
+
+#define BD_CLASS_PRINTING           0x140680
 
 /*pan的控制接口和发数接口,
   addr指定就按指定的查找，NULL就默认正在使用那个

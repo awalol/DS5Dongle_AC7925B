@@ -395,6 +395,7 @@
 <Add option="../../../../cpu/wl83/liba/media/lib_chorus_adv.a" />
 <Add option="../../../../cpu/wl83/liba/media/lib_pingpong_echo.a" />
 <Add option="../../../../cpu/wl83/liba/media/lib_wanson_asr.a" />
+<Add option="../../../../cpu/wl83/liba/media/lib_dsd_dec.a" />
 <Add option="../../../../cpu/wl83/liba/libvad.a" />
 <Add option="../../../../cpu/wl83/liba/event.a" />
 <Add option="../../../../cpu/wl83/liba/fs.a" />

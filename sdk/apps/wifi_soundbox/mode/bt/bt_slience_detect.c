@@ -427,7 +427,7 @@ void bt_stop_a2dp_slience_detect(u8 *bt_addr)
 
 bool bt_slience_get_detect_addr(u8 *bt_addr)
 {
-    return FALSE
+    return FALSE;
 }
 
 int bt_slience_detect_get_result(u8 *bt_addr)

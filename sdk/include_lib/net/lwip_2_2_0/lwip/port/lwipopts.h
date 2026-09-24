@@ -74,6 +74,10 @@ extern "C" {
 #endif
 #define ETHARP_SUPPORT_STATIC_ENTRIES   1
 
+/**
+ * LWIP_TCP_SACK_OUT==1: TCP will support sending selective acknowledgements (SACKs).
+ */
+#define LWIP_TCP_SACK_OUT 1
 /*
    -----------------------------------------------
    ---------- Platform specific locking ----------

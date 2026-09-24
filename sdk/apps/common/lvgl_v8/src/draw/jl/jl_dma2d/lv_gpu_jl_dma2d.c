@@ -13,6 +13,11 @@
 
 #include "fs/fs.h"
 
+/* 由硬件判断 colorkey(背景透明色) 开关，1:启用 0:回退软件判断逻辑 */
+#ifndef LV_USE_HW_COLORKEY
+#define LV_USE_HW_COLORKEY 1
+#endif
+
 #if LV_USE_GPU_JL_DMA2D
 
 /*********************
@@ -619,6 +624,20 @@ static void lv_draw_jl_dma2d_blend_fill_with_mask(lv_color_t *dest_buf, lv_coord
     bg_layer_param.alpha_mode = JLDMA2D_NO_MODIF_ALPHA;
     bg_layer_param.rbs = 0;
 
+#if LV_USE_HW_COLORKEY
+    dma2d_reset_all_regs();
+    dma2d_create_task();
+    dma2d_set_fg_layer(&fg_layer_param);
+
+#if LV_COLOR_DEPTH_EXTEN == 24
+    /* 背景 colorkey 像素逐像素视为透明：文字抗锯齿边缘与连写字形叠加都能正确混合 */
+    bg_layer_param.colorkey = 1;
+    bg_layer_param.color = 0x52aaa5;
+#endif
+    dma2d_set_bg_layer(&bg_layer_param);
+    dma2d_set_out_layer(&out_layer_param);
+    dma2d_set_mode(JLDMA2D_M2M_BLEND);
+#else
     dma2d_reset_all_regs();
     dma2d_create_task();
     dma2d_set_fg_layer(&fg_layer_param);
@@ -634,6 +653,8 @@ static void lv_draw_jl_dma2d_blend_fill_with_mask(lv_color_t *dest_buf, lv_coord
 #else
     dma2d_set_mode(JLDMA2D_M2M_BLEND);
 #endif
+#endif
+
     dma2d_run();
     dma2d_wait_done();
 

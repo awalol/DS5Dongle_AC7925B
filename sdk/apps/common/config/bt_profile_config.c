@@ -157,6 +157,15 @@ SDP_RECORD_HANDLER_REGISTER(map_sdp_record_item) = {
 };
 #endif
 
+#if (TCFG_BT_SUPPORT_PROFILE_HCRP==1)
+extern const u8 sdp_hcrp_service_data[];
+u8 hcrp_profile_support = 1;
+SDP_RECORD_HANDLER_REGISTER(hcrp_sdp_record_item) = {
+    .service_record = (u8 *)sdp_hcrp_service_data,
+    .service_record_handle = 0x0001000C,
+};
+#endif
+
 #if (((THIRD_PARTY_PROTOCOLS_SEL & CUSTOM_DEMO_EN) || (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)) && TCFG_ATT_OVER_EDR_DEMO_EN)
 //GATT over BR/EDR
 static const u8 sdp_att_service_data[60] = {                           //

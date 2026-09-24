@@ -196,6 +196,10 @@ extern const int config_msbc_decode_input_frame_replace;
 
 extern const int config_msbc_encode_used_software_enable;
 
+extern const float config_dsd_decode_output_gain;
+
+extern const int config_dsd_decode_output_chunk;
+
 extern const int config_flac_id3_enable;
 
 extern const int config_ape_id3_enable;

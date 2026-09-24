@@ -52,6 +52,7 @@ struct ffmpeg_context_s {
     uint32_t audio_to_video_idx;
     uint32_t audio_sample_rate;
     uint8_t audio_pause;
+    uint8_t audio_paused;
     uint8_t play_sync;
     uint8_t audio_task_exit;
     void *audio_pause_sem;
@@ -146,6 +147,13 @@ lv_res_t lv_ffmpeg_player_set_src(lv_obj_t *obj, const char *path);
  * @param cmd control commands
  */
 void lv_ffmpeg_player_set_cmd(lv_obj_t *obj, lv_ffmpeg_player_cmd_t cmd);
+
+/**
+ * 跳转到指定视频帧（跳帧/seek）
+ * @param obj pointer to a ffmpeg_player object
+ * @param frame 目标帧号，从 1 开始（1 表示第一帧），越界会自动钳制到 [1, total_frame]
+ */
+void lv_ffmpeg_player_seek(lv_obj_t *obj, uint32_t frame);
 
 /**
  * Set the video to automatically replay
