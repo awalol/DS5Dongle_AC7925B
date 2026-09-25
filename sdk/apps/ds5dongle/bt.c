@@ -1,3 +1,7 @@
+//*********************************************************************************//
+//                                头文件与日志配置                                 //
+//*********************************************************************************//
+
 #include "app_config.h"
 #include "system/includes.h"
 
@@ -7,6 +11,7 @@
 #include "btstack/bluetooth.h"
 #include "btstack/btstack_task.h"
 #include "classic/hci_lmp.h"
+#include "btcontroller_modules.h"
 #include "event/bt_event.h"
 #include "hci_event.h"
 #include "ibtstack.h"
@@ -15,36 +20,95 @@
 #define LOG_ERROR_ENABLE
 #define LOG_WARN_ENABLE
 #define LOG_INFO_ENABLE
+#define LOG_DEBUG_ENABLE
 #include "debug.h"
 #include "ble/hci_ll.h"
+
+//*********************************************************************************//
+//                                 常量与状态定义                                    //
+//*********************************************************************************//
 
 #define MTU_CONTROL                          0xffff
 #define MTU_INTERRUPT                        0xffff
 
+static bool bt_ready;
 static bool bt_searching;
 static bool new_pair;
 static bd_addr_t current_device_addr;
 static u16 hid_control_cid;
 static u16 hid_interrupt_cid;
+static bool hid_control_pending;    // Control 通道创建请求已提交，等待结果，防止 CID 未返回时重复创建
+static bool hid_interrupt_pending;  // Interrupt 通道创建请求已提交，等待结果，防止 CID 未返回时重复创建
 
 #define DS5_INQUIRY_LENGTH       10  /* 10 * 1.28 s */
 
-static const char ds5_device_name[] = "Wireless Controller";
+static const char ds5_device_name[] = "DualSense Wireless Controller";
 
 static void l2cap_packet_handler(u8 packet_type, u16 channel,
                                  u8 *packet, u16 size);
 
-/* 后续 DS5 解析/USB 转发模块可以覆盖这两个弱回调。 */
-__attribute__((weak))
+//*********************************************************************************//
+//                                  HID 数据回调                                    //
+//*********************************************************************************//
+
 void ds5_hid_input_report(const u8 *packet, u16 size) {
     (void) packet;
     (void) size;
+
+    static u32 start_ms;
+    static u32 packets;
+    static bool initialized;
+    const u32 log_interval_ms = 1000; // 输出间隔，单位 ms
+    u32 now_ms = sys_timer_get_ms();
+
+
+    if (!initialized) {
+        initialized = true;
+        start_ms = now_ms;
+        return; // 首包作为统计窗口起点
+    }
+
+    packets++;
+    u32 elapsed_ms = now_ms - start_ms;
+    if (elapsed_ms >= log_interval_ms) {
+        u32 rate_x10 = (u32)((u64)packets * 10000U / elapsed_ms);
+        log_info("HID Interrupt RX: packets=%u, interval=%u ms, rate=%u.%u Hz",
+                 (unsigned int)packets, (unsigned int)elapsed_ms,
+                 (unsigned int)(rate_x10 / 10U), (unsigned int)(rate_x10 % 10U));
+        start_ms = now_ms;
+        packets = 0;
+    }
+
+
 }
 
-__attribute__((weak))
 void ds5_hid_control_data(const u8 *packet, u16 size) {
     (void) packet;
     (void) size;
+
+    log_debug("Receive Control Data >>");
+    log_debug_hexdump(packet,size);
+}
+
+static void ds5_on_connected(void) {
+}
+
+//*********************************************************************************//
+//                               连接管理与线程投递                                   //
+//*********************************************************************************//
+
+/* Inquiry searches for peers; page scan lets a paired controller reconnect.
+ * Call only after stack init and with bt_searching cleared.
+ * bt_get_total_connect_dev() excludes paging, so also check new_pair. */
+static void bt_enable_reconnect(void) {
+    if (new_pair || bt_get_total_connect_dev()) {
+        return;
+    }
+
+    u32 scan_ret = bt_cmd_prepare(USER_CTRL_WRITE_SCAN_ENABLE, 0, NULL);
+    u32 conn_ret = bt_cmd_prepare(USER_CTRL_WRITE_CONN_ENABLE, 0, NULL);
+    log_info("restore reconnect scan: discoverable_ret=0x%x connectable_ret=0x%x",
+             scan_ret, conn_ret);
 }
 
 static void bt_reset_connection(void) {
@@ -52,14 +116,21 @@ static void bt_reset_connection(void) {
     new_pair = false;
     hid_control_cid = 0;
     hid_interrupt_cid = 0;
+    hid_control_pending = false;
+    hid_interrupt_pending = false;
+    bt_enable_reconnect();
 }
 
 /* sys_event 不在 btstack task 上，首次 register/create 需要投递过去。 */
 static int btstack_post_callback(void (*callback)(void *), void *priv) {
-    int msg[] = {(int) callback, (int) priv};
+    int msg[] = {(int) callback, 1, (int) priv};
 
     return os_taskq_post_type("btstack", Q_CALLBACK, ARRAY_SIZE(msg), msg);
 }
+
+//*********************************************************************************//
+//                              HID / L2CAP 通道管理                                //
+//*********************************************************************************//
 
 static void bt_l2cap_register_services(void *priv) {
     (void) priv;
@@ -74,25 +145,30 @@ static void bt_l2cap_register_services(void *priv) {
 static void bt_l2cap_open_control(void *priv) {
     (void) priv;
 
-    if (!new_pair || hid_control_cid) {
+    if (!new_pair || hid_control_cid || hid_control_pending) {
         return;
     }
 
-    hid_control_cid = l2cap_create_channel(l2cap_packet_handler,
+    /* Track pending separately; take the local CID from CHANNEL_OPENED.
+     * Set this before calling in case the stack dispatches synchronously. */
+    hid_control_pending = true;
+    u16 queued = l2cap_create_channel(l2cap_packet_handler,
                                            current_device_addr,
                                            PSM_HID_CONTROL,
                                            MTU_CONTROL);
-    if (hid_control_cid) {
-        log_info("opening HID Control, provisional cid 0x%x",
-                 hid_control_cid);
+
+    if (queued) {
+        log_info("opening HID Control, waiting for channel-opened event");
     } else {
-        /* 杰理可能先排队建链，随后才在 CHANNEL_OPENED 中分配 CID。 */
-        log_info("opening HID Control, local cid pending");
+        hid_control_pending = false;
+        log_error("HID Control create request failed");
     }
 }
 
 static void bt_l2cap_handle_channel_opened(const u8 *packet, u16 size) {
-    if (size < 24) {
+    /* The fields used here fit in the 21-byte base event, including
+     * remote_mtu at offsets 19..20; trailing extension fields are optional. */
+    if (size < 21) {
         log_error("short L2CAP channel-opened event: %d", size);
         return;
     }
@@ -101,24 +177,41 @@ static void bt_l2cap_handle_channel_opened(const u8 *packet, u16 size) {
     u16 psm = l2cap_event_channel_opened_get_psm(packet);
     u16 local_cid = l2cap_event_channel_opened_get_local_cid(packet);
 
+    log_info("L2CAP opened: size=%u psm=0x%x status=0x%x cid=0x%x",
+             size, psm, status, local_cid);
+    if (psm == PSM_HID_CONTROL) {
+        hid_control_pending = false;
+    } else if (psm == PSM_HID_INTERRUPT) {
+        hid_interrupt_pending = false;
+    }
+
     if (status) {
-        log_error("Open failed psm=0x%04X status=0x%02X\n", psm, status);
+        log_error("Open failed psm=0x%04X status=0x%02X", psm, status);
         bt_cmd_prepare(USER_CTRL_DISCONNECTION_HCI,
                        sizeof(current_device_addr), current_device_addr);
         return;
     }
 
     if (psm == PSM_HID_CONTROL) {
-        log_info("HID HID Control opened cid=0x%04X\n", local_cid);
+        log_info("HID Control opened cid=0x%04X", local_cid);
         hid_control_cid = local_cid;
         const u16 mtu = l2cap_get_remote_mtu_for_local_cid(hid_control_cid);
-        log_info("Remote Control MTU: %d\n", mtu);
+        log_info("Remote Control MTU: %d", mtu);
 
-        if (new_pair) {
-            log_info("[L2CAP] Opening interrupt channel\n");
-            hid_interrupt_cid = l2cap_create_channel(l2cap_packet_handler, current_device_addr, PSM_HID_INTERRUPT,
-                                                     MTU_INTERRUPT);
+        if (new_pair && !hid_interrupt_cid && !hid_interrupt_pending) {
+            log_info("[L2CAP] Opening interrupt channel");
+            hid_interrupt_pending = true;
+            if (!l2cap_create_channel(l2cap_packet_handler, current_device_addr,
+                                      PSM_HID_INTERRUPT, MTU_INTERRUPT)) {
+                hid_interrupt_pending = false;
+                log_error("HID Interrupt create request failed");
+            }
         }
+    } else if (psm == PSM_HID_INTERRUPT) {
+        hid_interrupt_cid = local_cid;
+        log_info("HID Interrupt opened cid=0x%04X", local_cid);
+
+        ds5_on_connected();
     }
 }
 
@@ -158,7 +251,7 @@ static void bt_l2cap_handle_incoming(const u8 *packet, u16 size) {
     }
 
     if (*cid) {
-        log_warn("decline duplicate HID PSM 0x%x", psm);
+        log_info("decline duplicate HID PSM 0x%x", psm);
         l2cap_decline_connection(
             local_cid, L2CAP_CONNECTION_REFUSED_RESOURCES);
         return;
@@ -180,7 +273,7 @@ static void l2cap_packet_handler(u8 packet_type, u16 channel,
         } else if (channel == hid_control_cid) {
             ds5_hid_control_data(packet, size);
         } else {
-            log_warn("data on unknown L2CAP cid 0x%x", channel);
+            log_info("data on unknown L2CAP cid 0x%x", channel);
         }
         return;
     }
@@ -203,6 +296,10 @@ static void l2cap_packet_handler(u8 packet_type, u16 channel,
             break;
     }
 }
+
+//*********************************************************************************//
+//                               设备搜索与名称回调                                   //
+//*********************************************************************************//
 
 static u8 bt_ds5_inquiry_result(char *name, u8 name_len, u8 *addr,
                                 u32 dev_class, char rssi) {
@@ -235,26 +332,30 @@ static u8 bt_ds5_inquiry_result(char *name, u8 name_len, u8 *addr,
     return TRUE;
 }
 
-static void bt_start_inquiry(void) {
+void bt_start_inquiry(void) {
     u8 inquiry_length = DS5_INQUIRY_LENGTH;
 
-    if (bt_searching || bt_get_total_connect_dev()) {
-        return;
-    }
-
-    new_pair = false;
-    if (bt_cmd_prepare(USER_CTRL_SEARCH_DEVICE, sizeof(inquiry_length), &inquiry_length)) {
-        log_error("start inquiry command failed");
+    u8 connected = bt_get_total_connect_dev();
+    if (!bt_ready || bt_searching || connected || new_pair) {
+        log_info("inquiry skipped: ready=%u searching=%u connected=%u pairing=%u",
+                 bt_ready, bt_searching, connected, new_pair);
         return;
     }
 
     bt_searching = true;
+    if (bt_cmd_prepare(USER_CTRL_SEARCH_DEVICE, sizeof(inquiry_length), &inquiry_length)) {
+        bt_searching = false;
+        log_error("start inquiry command failed");
+        bt_enable_reconnect();
+        return;
+    }
+
     log_info("searching for DualSense");
 }
 
 static void bt_read_remote_name(u8 status, u8 *addr, u8 *name) {
     if (status) {
-        log_warn("read remote name failed: %d", status);
+        log_info("read remote name failed: %d", status);
         return;
     }
 
@@ -262,7 +363,13 @@ static void bt_read_remote_name(u8 status, u8 *addr, u8 *name) {
     put_buf(addr, 6);
 }
 
+//*********************************************************************************//
+//                                   蓝牙初始化                                     //
+//*********************************************************************************//
+
 static int bt_init(void) {
+    bt_max_pwr_set(10, 5, 8, 10);
+
     bt_set_user_ctrl_conn_num(1);
 
     bt_set_page_timeout_value(8000);
@@ -270,6 +377,12 @@ static int bt_init(void) {
 
     bt_set_simple_pair_param(3, 0, 2);
     lmp_set_sniff_disable();
+
+#if TCFG_BT_RF_USE_EXT_PA_ENABLE
+    extern void bt_rf_PA_control_io_remap(u16 tx_io, u16 rx_io);
+    bt_rf_PA_control_io_remap(TCFG_RF_PA_TX_PORT, TCFG_RF_PA_RX_PORT);
+    bt_set_rxtx_status_enable(1);
+#endif
 
     bt_read_remote_name_handle_register(bt_read_remote_name);
     bt_emitter_set_enable_flag(1);
@@ -280,19 +393,27 @@ static int bt_init(void) {
     return btstack_init();
 }
 
+//*********************************************************************************//
+//                                  蓝牙事件处理                                   //
+//*********************************************************************************//
+
 static int bt_connection_status_event_handler(void *evt) {
     struct bt_event *bt = (struct bt_event *) evt;
 
     switch (bt->event) {
         case BT_STATUS_INIT_OK:
             log_info("BT_STATUS_INIT_OK");
+
+            extern u8 l2cap_debug_enable;
+            l2cap_debug_enable = 0xff;
+
+            bt_ready = true;
             bt_inquiry_result_handle_register(bt_ds5_inquiry_result);
             bt_set_emitter_pin_code_flag(0);
             if (btstack_post_callback(bt_l2cap_register_services, NULL)) {
                 log_error("post HID service registration failed");
             }
-            bt_cmd_prepare(USER_CTRL_WRITE_SCAN_ENABLE, 0, NULL);
-            bt_cmd_prepare(USER_CTRL_WRITE_CONN_ENABLE, 0, NULL);
+            bt_enable_reconnect();
             bt_start_inquiry();
             break;
         case BT_STATUS_FIRST_CONNECTED:
@@ -326,14 +447,19 @@ static int bt_connection_status_event_handler(void *evt) {
 static int bt_hci_event_handler(void *evt) {
     struct bt_event *bt = (struct bt_event *) evt;
 
+    log_info("HCI event=0x%x value=0x%x", bt->event, bt->value);
+
     switch (bt->event) {
         case HCI_EVENT_INQUIRY_COMPLETE:
             log_info("HCI_EVENT_INQUIRY_COMPLETE: 0x%x", bt->value);
             bt_searching = false;
+            bt_enable_reconnect();
             break;
         case HCI_EVENT_USER_CONFIRMATION_REQUEST: {
             u8 accept = 1;
-            bt_emitter_cmd_prepare(USER_CTRL_PAIR, sizeof(accept), &accept);
+            u32 ret = bt_emitter_cmd_prepare(USER_CTRL_PAIR, sizeof(accept), &accept);
+            log_info("SSP user confirmation: accept=%u, cmd_ret=0x%x",
+                     accept, ret);
             break;
         }
         case HCI_EVENT_CONNECTION_COMPLETE:
@@ -346,7 +472,7 @@ static int bt_hci_event_handler(void *evt) {
             break;
         case HCI_EVENT_DISCONNECTION_COMPLETE:
             log_info("HCI_EVENT_DISCONNECTION_COMPLETE: 0x%x", bt->value);
-            bt_searching = false;
+            bt_reset_connection();
             break;
         default:
             break;
@@ -355,7 +481,7 @@ static int bt_hci_event_handler(void *evt) {
     return FALSE;
 }
 
-// 在 app_main.c 的 app_default_event_handler 被调用
+/* Called by app_default_event_handler on AC792. */
 int bt_event_handler(struct sys_event *event) {
     switch (event->from) {
         case BT_EVENT_FROM_CON:
@@ -368,6 +494,10 @@ int bt_event_handler(struct sys_event *event) {
 
     return FALSE;
 }
+
+//*********************************************************************************//
+//                               应用生命周期与注册                                //
+//*********************************************************************************//
 
 static int app_state_machine(struct application *app, enum app_state state,
                              struct intent *it) {
