@@ -53,6 +53,7 @@
 //*********************************************************************************//
 #define TCFG_DEBUG_PORT                     IO_PORTB_00
 #define TCFG_UBOOT_DEBUG_PORT               PB00
+#define TCFG_DEBUG_BAUDRATE                 115200
 
 #define TCFG_UART0_ENABLE                   1              //UART0默认用来打印口
 #define TCFG_UART0_TX_IO                    TCFG_DEBUG_PORT
@@ -98,7 +99,7 @@
 #define TCFG_IOKEY_ENABLE                   1
 #define TCFG_IOKEY_INPUT0_ENABLE            1
 #define TCFG_IOKEY_INPUT0_CONNECT_WAY       ONE_PORT_TO_LOW
-#define TCFG_IOKEY_INPUT0_IO                IO_PORTD_08
+#define TCFG_IOKEY_INPUT0_IO                IO_PORTA_14
 #define TCFG_IOKEY_INPUT0_VALUE             KEY_POWER
 #define TCFG_IOKEY_INPUT1_ENABLE            0
 #define TCFG_IOKEY_INPUT1_CONNECT_WAY       ONE_PORT_TO_LOW

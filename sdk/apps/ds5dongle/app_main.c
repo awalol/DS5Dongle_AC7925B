@@ -2,6 +2,7 @@
 #include "system/includes.h"
 #include "app_core.h"
 #include "bt.h"
+#include "uart_cmd.h"
 #include "event/key_event.h"
 #include "asm/power_interface.h"
 
@@ -126,6 +127,7 @@ void app_main(void)
     init_intent(&it);
     it.name = "bt";
     start_app(&it);
+    uart_cmd_init();
 
-    os_task_create(ds5dongle_task, NULL, 10, 1000, 0, "ds5dongle_task");
+    // os_task_create(ds5dongle_task, NULL, 10, 1000, 0, "ds5dongle_task");
 }
