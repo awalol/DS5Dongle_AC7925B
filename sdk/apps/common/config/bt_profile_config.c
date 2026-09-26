@@ -276,11 +276,11 @@ const u8 hci_inquiry_support = 0;
 const u8 btstack_emitter_support = 0;
 #endif
 
-/*u8 l2cap_debug_enable = 0xf0;
+u8 l2cap_debug_enable = 0xf0;
 u8 rfcomm_debug_enable = 0xf;
 u8 profile_debug_enable = 0xff;
 u8 ble_debug_enable = 0xff;
-u8 btstack_tws_debug_enable = 0xf;*/
+u8 btstack_tws_debug_enable = 0xf;
 
 #else
 const u8 btstack_emitter_support = 0;

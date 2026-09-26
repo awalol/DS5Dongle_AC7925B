@@ -30,6 +30,10 @@
 
 #define MTU_CONTROL                          0xffff
 #define MTU_INTERRUPT                        0xffff
+#define HID_CONTROL_INFO_DELAY_MS            200
+
+extern int l2cap_send_signaling_packet(u16 handle, int code, int identifier, ...);
+extern int connection_handler_for_address(u8 *addr, u8 type);
 
 static bool bt_ready;
 static bool bt_searching;
@@ -39,8 +43,10 @@ static u16 hid_control_cid;
 static u16 hid_interrupt_cid;
 static bool hid_control_pending;    // Control 通道创建请求已提交，等待结果，防止 CID 未返回时重复创建
 static bool hid_interrupt_pending;  // Interrupt 通道创建请求已提交，等待结果，防止 CID 未返回时重复创建
+static u32 connection_generation;
+static bool hid_control_info_waiting;
 
-#define DS5_INQUIRY_LENGTH       10  /* 10 * 1.28 s */
+#define DS5_INQUIRY_LENGTH       30  /* 10 * 1.28 s */
 
 static const char ds5_device_name[] = "DualSense Wireless Controller";
 
@@ -112,6 +118,8 @@ static void bt_enable_reconnect(void) {
 }
 
 static void bt_reset_connection(void) {
+    ++connection_generation;
+    hid_control_info_waiting = false;
     bt_searching = false;
     new_pair = false;
     hid_control_cid = 0;
@@ -143,7 +151,10 @@ static void bt_l2cap_register_services(void *priv) {
 }
 
 static void bt_l2cap_open_control(void *priv) {
-    (void) priv;
+    if ((u32)priv != connection_generation) {
+        return;
+    }
+    hid_control_info_waiting = false;
 
     if (!new_pair || hid_control_cid || hid_control_pending) {
         return;
@@ -162,6 +173,32 @@ static void bt_l2cap_open_control(void *priv) {
     } else {
         hid_control_pending = false;
         log_error("HID Control create request failed");
+    }
+}
+
+/* Run in btstack, including the timeout callback registered here. */
+static void bt_l2cap_info_then_open_control(void *priv) {
+    if ((u32)priv != connection_generation || !new_pair ||
+        hid_control_pending || hid_control_cid || hid_control_info_waiting) {
+        return;
+    }
+
+    u16 handle = (u16)connection_handler_for_address(current_device_addr, 1);
+    if (handle) {
+        /* INFORMATION_REQUEST: extended features, experimental ID 0xF0. */
+        int ret = l2cap_send_signaling_packet(handle, 0x0A, 0xF0, 0x0002);
+        log_info("L2CAP INFO_REQ: handle=0x%x id=0xf0 type=2 ret=%d",
+                 handle, ret);
+    } else {
+        log_warn("L2CAP INFO_REQ skipped: no ACL handle");
+    }
+
+    hid_control_info_waiting = true;
+    if (!sys_timeout_add(priv, bt_l2cap_open_control, HID_CONTROL_INFO_DELAY_MS)) {
+        hid_control_info_waiting = false;
+        log_error("schedule delayed HID Control connection failed");
+    } else {
+        log_info("HID Control connection delayed by %u ms", HID_CONTROL_INFO_DELAY_MS);
     }
 }
 
@@ -323,6 +360,8 @@ static u8 bt_ds5_inquiry_result(char *name, u8 name_len, u8 *addr,
     }
 
     log_info("DualSense found, start Classic connection");
+    ++connection_generation;
+    hid_control_info_waiting = false;
     bt_searching = false;
     new_pair = true;
     memcpy(current_device_addr, addr, sizeof(current_device_addr));
@@ -426,7 +465,8 @@ static int bt_connection_status_event_handler(void *evt) {
         case BT_STATUS_ENCRY_COMPLETE:
             log_info("BT_STATUS_ENCRY_COMPLETE");
             if (new_pair) {
-                if (btstack_post_callback(bt_l2cap_open_control, NULL)) {
+                if (btstack_post_callback(bt_l2cap_info_then_open_control,
+                                          (void *)connection_generation)) {
                     log_error("post HID Control connection failed");
                 }
             } else {

@@ -21,3 +21,4 @@ section.txt
 *.o
 *.d
 version.z
+tmp/
