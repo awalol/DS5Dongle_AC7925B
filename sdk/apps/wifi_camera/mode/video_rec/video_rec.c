@@ -2382,8 +2382,13 @@ static int video1_rec_start()
 
 
 
+#ifdef CONFIG_NET_ENABLE
+
+    req.rec.audio.sample_rate = video_rec_get_audio_sampel_rate();
+#else
 
     req.rec.audio.sample_rate = 8000;
+#endif
     req.rec.audio.channel 	= 1;
     req.rec.audio.volume    = 100;
     req.rec.audio.buf = __this->audio_buf[1];
@@ -2824,7 +2829,7 @@ static int video2_rec_start()
 #else
     req.rec.fps 		= 0;
     req.rec.real_fps 	= 0;
-    req.rec.audio.sample_rate = 8000;
+    req.rec.audio.sample_rate = video_rec_get_audio_sampel_rate();
 #endif
     req.rec.audio.channel 	= 1;
     req.rec.audio.volume    = AUDIO_VOLUME;
@@ -3227,7 +3232,7 @@ static int video3_rec_start()
 
 
 
-    req.rec.audio.sample_rate = 8000;
+    req.rec.audio.sample_rate = video_rec_get_audio_sampel_rate();
     req.rec.audio.channel 	= 1;
     req.rec.audio.volume    = 100;
     req.rec.audio.buf = __this->audio_buf[3];
@@ -3623,7 +3628,7 @@ static int video4_rec_start()
 
 
 
-    req.rec.audio.sample_rate = 8000;
+    req.rec.audio.sample_rate = video_rec_get_audio_sampel_rate();
     req.rec.audio.channel 	= 1;
     req.rec.audio.volume    = 100;
     req.rec.audio.buf = __this->audio_buf[4];
@@ -4023,7 +4028,7 @@ static int video5_rec_start()
 
 
 
-    req.rec.audio.sample_rate = 8000;
+    req.rec.audio.sample_rate = video_rec_get_audio_sampel_rate();
     req.rec.audio.channel 	= 1;
     req.rec.audio.volume    = 100;
     req.rec.audio.buf = __this->audio_buf[5];
@@ -4993,6 +4998,9 @@ static int video_rec_capture(int id)
     }
     req.icap.src_w = req.icap.width;
     req.icap.src_h = req.icap.height;
+#if THREE_WAY_DOUBLE_RAW
+    req.icap.double_raw = 1;
+#endif
 
     req.icap.quality = VIDEO_MID_Q;
     req.icap.text_label = &label;

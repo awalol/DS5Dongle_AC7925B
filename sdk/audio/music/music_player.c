@@ -70,6 +70,9 @@ static const char scan_parm[] = "-t"
 #if (TCFG_DEC_AIFF_ENABLE)
                                 "AIF"
 #endif
+#if (TCFG_DEC_DSD_ENABLE)
+                                "DSFDFF"
+#endif
 #if (TCFG_DEC_MIDI_FILE_ENABLE)
                                 "MFA"
 #endif

@@ -608,13 +608,13 @@ Key3Str=\n\
 Key4Type=0\n\
 Key4Str=\n"
 #if WL_STA_SLEEP == 1
-    "PSMode=Legacy_PSP\n"
+              "PSMode=Legacy_PSP\n"
 #elif WL_STA_SLEEP == 2
-    "PSMode=Fast_PSP\n"
+              "PSMode=Fast_PSP\n"
 #else
-    "PSMode=CAM\n"
+              "PSMode=CAM\n"
 #endif
-    "AutoRoaming=0\n\
+              "AutoRoaming=0\n\
 RoamThreshold=70\n\
 APSDCapable=1\n\
 APSDAC=0;0;0;0\n\
@@ -947,6 +947,31 @@ __attribute__((weak)) int netdev_get_mac_addr(char *mac_addr)
 __attribute__((weak)) u8 *lte_module_get_mac_addr(void)
 {
     return NULL;
+}
+
+__attribute__((weak)) void wifi_set_sta_connect_timeout(int sec)
+{
+    while (1) {
+        puts("please add wpasupplicant.a \r\n ");
+    }
+}
+__attribute__((weak)) void wpa_supplicant_main(const char *ssid, const char *passphrase)
+{
+    while (1) {
+        puts("please add wpasupplicant.a \r\n ");
+    }
+}
+__attribute__((weak)) void wpa_supplicant_uninit(void)
+{
+    while (1) {
+        puts("please add wpasupplicant.a \r\n ");
+    }
+}
+__attribute__((weak)) void wpa_supplicant_req_scan_ssid(void *wpa_s, int sec)
+{
+    while (1) {
+        puts("please add wpasupplicant.a \r\n ");
+    }
 }
 
 #define TX_ERR_ADJUST_THRESHOLD 45

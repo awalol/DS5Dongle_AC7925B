@@ -840,11 +840,18 @@ int audio_digital_vol_node_name_get(u8 dvol_idx, char *node_name)
 
     struct application *mode = __get_current_app();
     if (!mode) {
-        for (int i = 0; i < DVOL_TYPE_NUM; i++) {
-            if (dvol_idx & BIT(i)) {
-                sprintf(node_name, "%s%s", "Vol_Sys", dvol_type[i]);
+#if !WARNING_TONE_VOL_FIXED
+        if (dvol_idx & TONE_DVOL) {
+            if (tone_player_runing()) {
+                sprintf(node_name, "%s%s", "Vol_Sys", "Tone");
+                return 0;
+            } else if (ring_player_runing()) {
+                sprintf(node_name, "%s%s", "Vol_Sys", "Ring");
+                return 0;
             }
         }
+#endif
+
         return 0;
     }
 

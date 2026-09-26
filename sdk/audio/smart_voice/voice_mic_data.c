@@ -77,6 +77,11 @@ extern const int config_adc_async_en;
 
 #define __this      (voice_handle)
 
+u8 smart_voice_is_open(void)
+{
+    return voice_handle != NULL;
+}
+
 #if CONFIG_VOICE_MIC_DATA_DUMP
 static u8 mic_data_dump = 0;
 #endif

@@ -28,7 +28,7 @@ __attribute__((used)) int *__errno(void)
     return &errno;
 }
 
-volatile unsigned long jiffies = 10;
+volatile unsigned long sec(.volatile_ram) jiffies = 10;
 
 #if 0
 volatile unsigned long hi_jiffies = 10;

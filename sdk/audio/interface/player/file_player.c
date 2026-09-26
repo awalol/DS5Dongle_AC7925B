@@ -766,6 +766,7 @@ int file_dec_set_start_dest_play(u32 start_time, u32 dest_time, u32(*cb)(void *)
     struct audio_dest_time_play_param param = {0};
 
     switch (coding_type) {
+    case AUDIO_CODING_DSD:
     case AUDIO_CODING_MP3:
     case AUDIO_CODING_WAV:
         param.start_time = start_time;

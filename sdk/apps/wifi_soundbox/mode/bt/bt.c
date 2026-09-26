@@ -281,6 +281,12 @@ static int bt_connction_status_event_handler(void *evt)
             bt_set_music_device_volume(bt->value);
         }
         break;
+    case BT_STATUS_CONN_HCRP_CH:
+        log_info("BT_STATUS_CONN_HCRP_CH");
+        break;
+    case BT_STATUS_DISCONN_HCRP_CH:
+        log_info("BT_STATUS_DISCONN_HCRP_CH");
+        break;
     default:
         log_info("BT STATUS DEFAULT : 0x%x", bt->event);
         break;

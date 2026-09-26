@@ -620,6 +620,8 @@ static void bt_function_select_init(void)
 #if (TCFG_BT_SUPPORT_PROFILE_PBAP==1)
     ////设置蓝牙设备类型
     bt_change_hci_class_type(BD_CLASS_CAR_AUDIO);
+// #elif(TCFG_BT_SUPPORT_PROFILE_HCRP == 1)
+//     bt_change_hci_class_type(BD_CLASS_PRINTING);
 #else
     bt_change_hci_class_type(BD_CLASS_LOUDSPEAKER);
 #endif
@@ -839,4 +841,38 @@ void bip_rx_data_handle(u8 *packet, u16 body_len, u32 length, u8 bip_data_status
     }
 }
 
+#endif
+
+#if TCFG_BT_SUPPORT_PROFILE_HCRP
+const char Service_name[] = "Hardcopy Cable Replacement";
+const char Ieee_1284id[] = "MFG:Jieli;CMD:PT-CBP;MDL:JL-001;CLS:PRINTER;CID:Jieli MobilePrinter TypeA1";
+const char Device_name[] = "JL-001";
+const char Friendly_name[] = "Jieli Bluetooth Printer";
+
+//用于将打印机状态返回给协议栈，应答给远端
+u16 printer_port_status()
+{
+    u16 printrt_status_bit = 0x108;
+    return printrt_status_bit;
+}
+
+//用于将接收buffer剩余大小返回给协议栈，应答给远端
+int printer_rx_buffer()
+{
+    int printer_rx_buffer_size = 0xcac;
+    return printer_rx_buffer_size;
+}
+
+//用于厂商自定义命令解析
+u8 hcrp_user_cmd(const u8 *packet, int size, u8 *send_cmd)
+{
+    put_buf(packet, size);
+    return strlen(send_cmd);
+}
+
+//接收到的数据
+void hcrp_rx_data_packet(u8 *packet, u16 size)
+{
+    put_buf(packet, size);
+}
 #endif

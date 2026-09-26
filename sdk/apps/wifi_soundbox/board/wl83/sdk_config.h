@@ -170,6 +170,7 @@
 #define TCFG_BT_SUPPORT_PROFILE_OPP               0                // OPP
 #define TCFG_BT_SUPPORT_PROFILE_IAP               0                // IAP
 #define TCFG_BT_SUPPORT_PROFILE_HSP               0                // HSP
+#define TCFG_BT_SUPPORT_PROFILE_HCRP              0                // HCRP
 
 #define TCFG_USER_TWS_ENABLE                      0                // TWS
 #if TCFG_USER_TWS_ENABLE
@@ -335,6 +336,7 @@
 #define TCFG_DEC_WTG_ENABLE                       1                // WTG
 #define TCFG_DEC_MTY_ENABLE                       1                // MTY
 #define TCFG_DEC_WTS_ENABLE                       1                // WTS
+#define TCFG_DEC_DSD_ENABLE                       0                // DSD
 #define TCFG_ENC_MSBC_SW_ENABLE                   1                // MSBC
 #define TCFG_ENC_CVSD_ENABLE                      1                // CVSD
 #define TCFG_ENC_OGG_ENABLE                       1                // OGG

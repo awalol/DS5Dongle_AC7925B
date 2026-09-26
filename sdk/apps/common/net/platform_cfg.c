@@ -100,7 +100,8 @@ char *get_aisp_code(void)
 }
 #endif
 
-#if (defined CONFIG_ASR_ALGORITHM) && (CONFIG_ASR_ALGORITHM == JLKWS_ALGORITHM)
+#if ((defined CONFIG_ASR_ALGORITHM) && (CONFIG_ASR_ALGORITHM == JLKWS_ALGORITHM)) || \
+    (defined TCFG_SMART_VOICE_ENABLE && TCFG_SMART_VOICE_ENABLE && !TCFG_AUDIO_ASR_DEVELOP)
 char *get_kws_auth_key(void)
 {
     return "kws_test_key";

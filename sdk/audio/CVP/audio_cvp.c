@@ -537,6 +537,14 @@ int audio_aec_open(struct audio_aec_init_param_t *init_param, s16 enablebit, int
         aec_param->output_handle = out_hdl;
     }
 
+#if (TCFG_AUDIO_SMS_SEL == SMS_TDE)
+#if TCFG_SMART_VOICE_ENABLE
+    if (smart_voice_is_open()) {
+        aec_param->EnableBit |= TDE_EN | TDEYE_EN;
+    }
+#endif
+#endif
+
     aec_param->output_way = global_output_way;
 
     if (aec_param->output_way == 0 && aec_param->adc_ref_en == 0) {

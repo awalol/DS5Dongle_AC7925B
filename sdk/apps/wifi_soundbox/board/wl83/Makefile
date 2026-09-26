@@ -1451,6 +1451,7 @@ LFLAGS := \
 	../../../../cpu/wl83/liba/media/lib_chorus_adv.a \
 	../../../../cpu/wl83/liba/media/lib_pingpong_echo.a \
 	../../../../cpu/wl83/liba/media/lib_wanson_asr.a \
+	../../../../cpu/wl83/liba/media/lib_dsd_dec.a \
 	../../../../cpu/wl83/liba/libvad.a \
 	../../../../cpu/wl83/liba/event.a \
 	../../../../cpu/wl83/liba/fs.a \

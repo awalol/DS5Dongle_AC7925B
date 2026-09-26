@@ -125,6 +125,8 @@ int smart_voice_core_create(void *priv);
 int smart_voice_core_free(void);
 
 /*语音识别回音消除相关函数*/
+u8 smart_voice_is_open(void);
+
 void audio_smart_voice_aec_cbuf_data_clear(void);
 
 int audio_smart_voice_aec_open(void);

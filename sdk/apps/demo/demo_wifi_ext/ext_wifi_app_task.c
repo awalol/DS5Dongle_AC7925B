@@ -282,6 +282,32 @@ void ext_wifi_off(void)
     dev_ioctl(wifi_dev, DEV_NETWORK_STOP, 0);
 }
 
+
+static void print_scan_result(struct netdev_ssid_info *ssid_info, unsigned int num)
+{
+    unsigned int i;
+
+    if (!ssid_info || !num) {
+        return;
+    }
+
+    for (i = 0; i < num; i++) {
+        printf("[%u] ssid:%.*s ssid_len:%u bssid:%02x:%02x:%02x:%02x:%02x:%02x rssi:%ld ch:%u\n",
+               i,
+               ssid_info[i].ssid_len,
+               ssid_info[i].ssid,
+               ssid_info[i].ssid_len,
+               ssid_info[i].mac_addr[0],
+               ssid_info[i].mac_addr[1],
+               ssid_info[i].mac_addr[2],
+               ssid_info[i].mac_addr[3],
+               ssid_info[i].mac_addr[4],
+               ssid_info[i].mac_addr[5],
+               ssid_info[i].rssi,
+               ssid_info[i].channel_number);
+    }
+}
+
 static void ext_wifi_app_task(void *priv)
 {
     int msg[32];
@@ -319,6 +345,7 @@ static void ext_wifi_app_task(void *priv)
 
     sys_timer_add(NULL, wifi_app_timer_func, 1000);
 
+#if 1
 #if (EXT_WIFI_TEST_MODE == AP_TEST_MODE)
     info.mode = AP_MODE;
     info.ssid = AP_SSID;
@@ -337,13 +364,33 @@ static void ext_wifi_app_task(void *priv)
     info.force_default_mode = 1;
     dev_ioctl(wifi_dev, DEV_P2P_MODE, (u32)&info);
 #endif
-
+#endif
 
 #ifdef CONFIG_IPERF_ENABLE
     void iperf_test(void);
     iperf_test();
 #endif
 
+#if 1 //爱科微8800d40 scan示例
+    while (1) {
+        u8 channels[] = {1, 6, 11, 36, 44, 48, 52, 149, 157};
+
+        info.scan_channels = channels;
+        info.scan_channel_num = sizeof(channels) / sizeof(channels[0]);
+        dev_ioctl(wifi_dev, DEV_NET_SCANF,  &info);
+
+        os_time_dly(200);
+
+        struct netdev_ssid_info ssid_info[32] = {0};
+
+        info.sta_ssid_info = ssid_info;
+        info.sta_ssid_num = 32;
+        dev_ioctl(wifi_dev, DEV_GET_STA_SSID_INFO, &info);
+        print_scan_result(ssid_info, info.sta_ssid_num);
+        os_time_dly(200);
+    }
+
+#endif
     while (1) {
         res = os_task_pend("taskq", msg, ARRAY_SIZE(msg));
 

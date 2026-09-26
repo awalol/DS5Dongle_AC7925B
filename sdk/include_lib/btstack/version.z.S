@@ -4,4 +4,4 @@
 
 include_lib_btstack_version:
 
-.asciz "INCLUDE_BTSTACK-$837439f"
+.asciz "INCLUDE_BTSTACK-$6d2961c"

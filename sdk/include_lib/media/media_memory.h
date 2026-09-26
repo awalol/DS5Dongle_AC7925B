@@ -59,6 +59,7 @@ enum audio_module {
     //Codec Modules
     AUD_MODULE_AAC,
     AUD_MODULE_AAC_ENERGY,
+    AUD_MODULE_DSD_DEC,
 };
 
 static const char *mm_module[] = {
