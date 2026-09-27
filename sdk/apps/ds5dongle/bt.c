@@ -404,9 +404,6 @@ static int bt_connection_status_event_handler(void *evt) {
         case BT_STATUS_INIT_OK:
             log_info("BT_STATUS_INIT_OK");
 
-            extern u8 l2cap_debug_enable;
-            l2cap_debug_enable = 0xff;
-
             bt_ready = true;
             bt_inquiry_result_handle_register(bt_ds5_inquiry_result);
             bt_set_emitter_pin_code_flag(0);
