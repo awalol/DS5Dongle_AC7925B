@@ -285,5 +285,8 @@
 #endif
 #define CONFIG_DEBUG_LIB(x)         (x & LIB_DEBUG)
 
+/* 临时排查 HID Control pending：打开 btctrler 的 [LMP] 日志，便于和 AC701N 的日志逐行对比。定位完删除。 */
+#define DS5_DEBUG_LMP
+
 
 #endif ///< APP_CONFIG_H

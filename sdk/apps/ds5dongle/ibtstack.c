@@ -34,6 +34,16 @@ void l2cap_decline_connection(u16 local_cid, u8 reason)
     l2cap_decline_connection_internal(local_cid, reason);
 }
 
+/* btstack.a 的弱函数（默认空实现）：收到对端 IO Capability Response 时调用。
+ * 打印手柄的配对能力，用来确认 SSP 走的是哪种关联模型。
+ */
+void hci_event_io_capability_response_cb(u8 *addr, u8 io_cap, u8 oob_data, u8 auth_req)
+{
+    printf("[DS5_BT] remote IO capability: io_cap=%u oob=%u auth_req=0x%02x\n",
+           io_cap, oob_data, auth_req);
+    put_buf(addr, 6);
+}
+
 /* AC792 diagnostic tap: HCI ingress redirected by the diagnostic build rule.
  * This is the library HCI ingress, not the application's HID callback.
  * Never modify/drop packets or interpret controller-private event layouts.
@@ -118,6 +128,10 @@ void ds5_diag_hci_event(const u8 *packet)
                packet[2], ds5_diag_le16(packet + 3));
     } else if ((packet[0] == 0x12 || packet[0] == 0x36) && packet[1] >= 1) {
         printf("[DS5_HCI] event=0x%02x status=0x%02x\n", packet[0], packet[2]);
+    } else if (packet[0] == 0xF7 && packet[1] >= 1) {
+        /* 0xF7 is the controller's vendor encryption notification. It may
+         * occur more than once during SSP/link-key authentication. */
+        printf("[DS5_HCI] VENDOR_ENCRY_COMPLETE status=0x%02x\n", packet[2]);
     }
 }
 

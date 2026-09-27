@@ -337,7 +337,12 @@ const char log_tag_const_w_HCI_LMP AT(.LOG_TAG_CONST) = CONFIG_DEBUG_LIB(TRUE);
 const char log_tag_const_e_HCI_LMP AT(.LOG_TAG_CONST) = CONFIG_DEBUG_LIB(TRUE);
 
 const char log_tag_const_v_LMP AT(.LOG_TAG_CONST) = CONFIG_DEBUG_LIB(FALSE);
+#ifdef DS5_DEBUG_LMP
+/* ds5dongle 排查用：release 构建里也打印 [LMP] 收发日志 */
+const char log_tag_const_i_LMP AT(.LOG_TAG_CONST) = TRUE;
+#else
 const char log_tag_const_i_LMP AT(.LOG_TAG_CONST) = CONFIG_DEBUG_LIB(TRUE);
+#endif
 const char log_tag_const_d_LMP AT(.LOG_TAG_CONST) = CONFIG_DEBUG_LIB(TRUE);
 const char log_tag_const_w_LMP AT(.LOG_TAG_CONST) = CONFIG_DEBUG_LIB(TRUE);
 const char log_tag_const_e_LMP AT(.LOG_TAG_CONST) = CONFIG_DEBUG_LIB(TRUE);
