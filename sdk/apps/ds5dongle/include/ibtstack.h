@@ -18,6 +18,9 @@
 #ifndef L2CAP_EVENT_INCOMING_CONNECTION
 #define L2CAP_EVENT_INCOMING_CONNECTION      0x72
 #endif
+#ifndef L2CAP_EVENT_CAN_SEND_NOW
+#define L2CAP_EVENT_CAN_SEND_NOW              0x78
+#endif
 
 #define L2CAP_CONNECTION_REFUSED_RESOURCES   0x04
 
@@ -28,5 +31,8 @@ void l2cap_register_service(btstack_packet_handler_t packet_handler,
 void l2cap_accept_connection(u16 local_cid);
 void l2cap_decline_connection(u16 local_cid, u8 reason);
 u16 l2cap_get_remote_mtu_for_local_cid(u16 local_cid);
+int l2cap_can_send_packet_now(u16 local_cid);
+void l2cap_request_can_send_now_event(u16 local_cid);
+int l2cap_send(u16 local_cid, u8 *data, u16 len);
 
 #endif

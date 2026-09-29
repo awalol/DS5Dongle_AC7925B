@@ -100,7 +100,6 @@ void app_default_event_handler(struct sys_event *event)
     case SYS_NET_EVENT:
         break;
     case SYS_BT_EVENT:
-        bt_event_handler(event);
         break;
     default:
         ASSERT(0, "unknow event type: %s\n", __func__);
