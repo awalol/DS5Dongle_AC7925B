@@ -3,6 +3,7 @@
 #include "device/uart.h"
 #include "uart_cmd.h"
 #include "bt.h"
+#include "usb/device/usb_stack.h"
 
 extern void go_mask_usb_updata(void);
 
@@ -15,7 +16,7 @@ static void cmd_update_enter(void)
 
 static void cmd_usb_start(void)
 {
-    puts("UART S command: USB start is not supported yet\n");
+    usb_start(1,0);
 }
 
 static void uart_cmd_post(void (*callback)(void))

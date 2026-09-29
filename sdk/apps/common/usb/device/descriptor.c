@@ -36,8 +36,8 @@ static const u8 sDeviceDescriptor[] = { //<Device Descriptor
     0x00,       // bDeviceSubClass: none
     0x00,       // bDeviceProtocol: none
     EP0_SETUP_LEN,//EP0_LEN,      // bMaxPacketSize0: 8/64 bytes
-    0x54, 0x36, // idVendor: 0x3654 - Zhuhai Jieli Technology
-    0x56, 0x77,     // idProduct: chip id
+    0x4C, 0x05,    // idVendor
+    0xE6, 0x0C,    // idProduct
     0x00, 0x01,     // bcdDevice: version 1.0
     0x01,       // iManufacturer: Index to string descriptor that contains the string <Your Name> in Unicode
     0x02,       // iProduct: Index to string descriptor that contains the string <Your Product Name> in Unicode
@@ -49,50 +49,75 @@ static const u8 LANGUAGE_STR[] = {
     0x04, 0x03, 0x09, 0x04
 };
 
-static const u8 product_string[] = {
-    42,
-    0x03,
-    'U', 0x00,
+static const u8 product_string_ds5[] = {
+    60,
+    USB_DT_STRING,
+    // DualSense Wireless Controller
+    'D', 0x00,
+    'u', 0x00,
+    'a', 0x00,
+    'l', 0x00,
     'S', 0x00,
-    'B', 0x00,
+    'e', 0x00,
+    'n', 0x00,
+    's', 0x00,
+    'e', 0x00,
+    ' ', 0x00,
+    'W', 0x00,
+    'i', 0x00,
+    'r', 0x00,
+    'e', 0x00,
+    'l', 0x00,
+    'e', 0x00,
+    's', 0x00,
+    's', 0x00,
     ' ', 0x00,
     'C', 0x00,
     'o', 0x00,
-    'm', 0x00,
-    'p', 0x00,
-    'o', 0x00,
-    's', 0x00,
-    'i', 0x00,
+    'n', 0x00,
     't', 0x00,
+    'r', 0x00,
+    'o', 0x00,
+    'l', 0x00,
+    'l', 0x00,
     'e', 0x00,
-    ' ', 0x00,
-    'D', 0x00,
-    'e', 0x00,
-    'v', 0x00,
-    'i', 0x00,
-    'c', 0x00,
-    'e', 0x00,
+    'r', 0x00,
 };
 
 static const u8 MANUFACTURE_STR[] = {
-    34,         //该描述符的长度为34字节
-    0x03,       //字符串描述符的类型编码为0x03
-    0x4a, 0x00, //J
-    0x69, 0x00, //i
-    0x65, 0x00, //e
-    0x6c, 0x00, //l
-    0x69, 0x00, //i
-    0x20, 0x00, //
-    0x54, 0x00, //T
-    0x65, 0x00, //e
-    0x63, 0x00, //c
-    0x68, 0x00, //h
-    0x6e, 0x00, //n
-    0x6f, 0x00, //o
-    0x6c, 0x00, //l
-    0x6f, 0x00, //o
-    0x67, 0x00, //g
-    0x79, 0x00, //y
+    62,
+    USB_DT_STRING,
+    // Sony Interactive Entertainment
+    'S', 0x00,
+    'o', 0x00,
+    'n', 0x00,
+    'y', 0x00,
+    ' ', 0x00,
+    'I', 0x00,
+    'n', 0x00,
+    't', 0x00,
+    'e', 0x00,
+    'r', 0x00,
+    'a', 0x00,
+    'c', 0x00,
+    't', 0x00,
+    'i', 0x00,
+    'v', 0x00,
+    'e', 0x00,
+    ' ', 0x00,
+    'E', 0x00,
+    'n', 0x00,
+    't', 0x00,
+    'e', 0x00,
+    'r', 0x00,
+    't', 0x00,
+    'a', 0x00,
+    'i', 0x00,
+    'n', 0x00,
+    'm', 0x00,
+    'e', 0x00,
+    'n', 0x00,
+    't', 0x00,
 };
 
 static const u8 sConfigDescriptor[] = {	//<Config Descriptor
@@ -182,7 +207,8 @@ void get_string_ee(u8 *ptr)
 
 void get_product_str(u8 *ptr)
 {
-    memcpy(ptr, product_string, product_string[0]);
+    //TODO: DS5/DSE 切换
+    memcpy(ptr, product_string_ds5, product_string_ds5[0]);
 }
 
 const u8 *usb_get_config_desc(void)

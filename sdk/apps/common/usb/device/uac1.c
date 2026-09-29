@@ -361,7 +361,8 @@ static const u8 uac_audio_interface_association[] = {
     USB_CLASS_AUDIO,//AUDIO_FUNCTION Function Class code
     USB_SUBCLASS_AUDIOSTREAMING,//FUNCTION_SUBCLASS_UNDEFINED
     PC_PROTOCOL_UNDEFINED,//AF_VERSION_02_00 Function Protocol code.
-    SPEAKER_STR_INDEX,//Index of a string descriptor that describes this interface.
+    // SPEAKER_STR_INDEX,//Index of a string descriptor that describes this interface.
+    0
 };
 static const u8 uac_ac_standard_interface_desc[] = {
 ///standard interface AC descriptor(Interface 0, Alternate Setting 0)
@@ -373,7 +374,8 @@ static const u8 uac_ac_standard_interface_desc[] = {
     USB_CLASS_AUDIO,       //InterfaceClass:audio
     USB_SUBCLASS_AUDIOCONTROL,       //InterfaceSubClass:audio ctl
     PC_PROTOCOL_UNDEFINED,       //InterfaceProtocol
-    SPEAKER_STR_INDEX,      //Interface String
+    // SPEAKER_STR_INDEX,      //Interface String
+    0
 };
 static const u8 uac_spk_ac_interface[] = {
 ///class-specific AC interface descriptor

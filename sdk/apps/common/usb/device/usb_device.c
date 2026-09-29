@@ -1,3 +1,4 @@
+#include "app_config.h"
 #include "usb/device/usb_stack.h"
 #include "usb_config.h"
 #include "usb/device/msd.h"
@@ -6,14 +7,15 @@
 #include "usb/device/custom_hid.h"
 #include "usb/device/uac_audio.h"
 #include "usb/device/cdc.h"
+#if TCFG_USB_SLAVE_UVC_ENABLE
 #include "usb/device/slave_uvc.h"
+#endif
 #include "usb/device/printer.h"
 #include "usb/device/cdc_rndis.h"
 #include "usb/device/midi.h"
 #include "irq.h"
 #include "init.h"
 #include "gpio.h"
-#include "app_config.h"
 
 #define LOG_TAG_CONST       USB
 #define LOG_TAG             "[USB]"

@@ -139,7 +139,7 @@ static u32 setup_device(struct usb_device_t *usb_device, struct usb_ctrlrequest 
             case SPEAKER_STR_INDEX:
             case MIC_STR_INDEX:
             case 2:
-                if (usb_device->bDeviceStates == USB_DEFAULT) {
+                /*if (usb_device->bDeviceStates == USB_DEFAULT) {
                     ret = 0;
                 } else {
                     u8 *ptr = usb_set_data_payload(usb_device, req, user_stirng, sizeof(user_stirng));
@@ -147,7 +147,10 @@ static u32 setup_device(struct usb_device_t *usb_device, struct usb_ctrlrequest 
                         ptr[18] = '2';
                     }
                     ret = 1;
-                }
+                }*/
+                get_product_str(tx_payload);
+                usb_set_data_payload(usb_device, req, tx_payload, tx_payload[0]);
+                ret = 1;
                 break;
 #endif
 #if TCFG_USB_APPLE_DOCK_EN
@@ -174,14 +177,14 @@ static u32 setup_device(struct usb_device_t *usb_device, struct usb_ctrlrequest 
 #endif
             get_device_descriptor(tx_payload, usb_id);
 #ifndef CONFIG_VIDEO_IQ_TOOLS_ENABLE
-            for (int i = 0; i < 16; i++) {
+            /*for (int i = 0; i < 16; i++) {
                 //为了兼容windows7等老电脑，配置成不同类时应该使用不同pid
                 if (usb_device->wDeviceClass & BIT(i)) {
                     tx_payload[11] += i + 1;
                 }
-            }
+            }*/
             //区分两个usb id设备
-            tx_payload[10] += usb_id;
+            // tx_payload[10] += usb_id;
             //为了兼容macOS，必须设成复合设备，否则macbook会不认设备
             tx_payload[0x4] = 0xef; //device class should be Multi-interface Function 0xEF
             tx_payload[0x5] = 0x2; //device subclass should be Multi-interface Function 2

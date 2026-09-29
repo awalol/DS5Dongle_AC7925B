@@ -2,7 +2,6 @@
 #include "app_config.h"
 #include "lbuf.h"
 #include "system/init.h"
-#include "host_uvc.h"
 #include "asm/debug.h"
 
 #define LOG_TAG_CONST       USB

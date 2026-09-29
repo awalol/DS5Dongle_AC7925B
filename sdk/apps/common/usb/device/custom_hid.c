@@ -4,6 +4,7 @@
 #include "usb_config.h"
 #include "app_config.h"
 #include "circular_buf.h"
+#include "usb/device/custom_hid.h"
 
 #if TCFG_USB_CUSTOM_HID_ENABLE
 
@@ -14,15 +15,23 @@
 #define LOG_INFO_ENABLE
 /* #define LOG_DUMP_ENABLE */
 #define LOG_CLI_ENABLE
+
 #include "debug.h"
 
 #define USB_HID_EP_DMA_BUFFER_KEEP_ENABLE  0
 
 typedef void (*hid_rx_handle_t)(const usb_dev usb_id, void *hdl, u8 *buffer, u32 len);
+typedef void (*hid_get_report_handle_t)(const usb_dev usb_id, void *hdl, u8 *buffer, u32 len);
+typedef void (*hid_set_report_handle_t)(const usb_dev usb_id, void *hdl, u8 *buffer, u32 len);
 struct custom_hid_hdl {
     u8 cfg_done;
     void *priv_hdl;
     hid_rx_handle_t hid_rx_hook;
+
+    void *get_report_priv;
+    hid_get_report_handle_t get_report_hook;
+    void *set_report_priv;
+    hid_set_report_handle_t set_report_hook;
 };
 static struct custom_hid_hdl *custom_hid_info[USB_MAX_HW_NUM];
 #if USB_MALLOC_ENABLE
@@ -70,36 +79,186 @@ static const u8 sHIDDescriptor[] = {
     HID_INTR_INTERVAL,                       // bInterval, for high speed 2^(n-1) * 125us, for full/low speed n * 1ms
 };
 
-static const u8 sHIDReportDesc[] = {
-    USAGE_PAGE(2, 0x02, 0xff),
-    USAGE(1, 0x02),
-    COLLECTION(1, APPLICATION),
-    USAGE(1, 0x03),
-    LOGICAL_MIN(1, 0x00),
-    LOGICAL_MAX(2, 0xff, 0x00),
-    REPORT_SIZE(1, 8),
-    REPORT_COUNT(1, 0x40),
-    INPUT(1, 0x00),
-    USAGE(1, 0x04),
-    LOGICAL_MIN(1, 0x00),
-    LOGICAL_MAX(2, 0xff, 0x00),
-    REPORT_SIZE(1, 0x08),
-    REPORT_COUNT(1, 0X40),
-    OUTPUT(1, 0x00),
-    END_COLLECTION,
+static const u8 sDS5HIDReportDesc[] = {
+    USAGE_PAGE(1, 0x01),        // Usage Page: Generic Desktop
+    USAGE(1, 0x05),             // Usage: Game Pad
+    COLLECTION(1, APPLICATION), // Collection: Application
+
+    REPORT_ID(1, 0x01),          // Report ID: 0x01
+    USAGE(1, 0x30),              // Usage: X
+    USAGE(1, 0x31),              // Usage: Y
+    USAGE(1, 0x32),              // Usage: Z
+    USAGE(1, 0x35),              // Usage: Rz
+    USAGE(1, 0x33),              // Usage: Rx
+    USAGE(1, 0x34),              // Usage: Ry
+    LOGICAL_MIN(1, 0x00),        // Logical Min: 0
+    LOGICAL_MAX(2, 0xff, 0x00),  // Logical Max: 255
+    REPORT_SIZE(1, 0x08),        // Report Size: 8 bits
+    REPORT_COUNT(1, 0x06),       // Report Count: 6
+    INPUT(1, 0x02),              // Input: Data, Variable, Absolute
+    USAGE_PAGE(2, 0x00, 0xff),   // Usage Page: Vendor Defined 0xff00
+    USAGE(1, 0x20),              // Usage: Vendor Defined 0x20
+    REPORT_COUNT(1, 0x01),       // Report Count: 1
+    INPUT(1, 0x02),              // Input: Data, Variable, Absolute
+    USAGE_PAGE(1, 0x01),         // Usage Page: Generic Desktop
+    USAGE(1, 0x39),              // Usage: Hat Switch
+    LOGICAL_MIN(1, 0x00),        // Logical Min: 0
+    LOGICAL_MAX(1, 0x07),        // Logical Max: 7
+    PHYSICAL_MIN(1, 0x00),       // Physical Min: 0
+    PHYSICAL_MAX(2, 0x3b, 0x01), // Physical Max: 315
+    UNIT(1, 0x14),               // Unit: English Rotation, Degrees
+    REPORT_SIZE(1, 0x04),        // Report Size: 4 bits
+    REPORT_COUNT(1, 0x01),       // Report Count: 1
+    INPUT(1, 0x42),              // Input: Data, Variable, Absolute, Null State
+    UNIT(1, 0x00),               // Unit: None
+    USAGE_PAGE(1, 0x09),         // Usage Page: Button
+    USAGE_MIN(1, 0x01),          // Usage Min: 1
+    USAGE_MAX(1, 0x0f),          // Usage Max: 15
+    LOGICAL_MIN(1, 0x00),        // Logical Min: 0
+    LOGICAL_MAX(1, 0x01),        // Logical Max: 1
+    REPORT_SIZE(1, 0x01),        // Report Size: 1 bits
+    REPORT_COUNT(1, 0x0f),       // Report Count: 15
+    INPUT(1, 0x02),              // Input: Data, Variable, Absolute
+    USAGE_PAGE(2, 0x00, 0xff),   // Usage Page: Vendor Defined 0xff00
+    USAGE(1, 0x21),              // Usage: Vendor Defined 0x21
+    REPORT_COUNT(1, 0x0d),       // Report Count: 13
+    INPUT(1, 0x02),              // Input: Data, Variable, Absolute
+    USAGE_PAGE(2, 0x00, 0xff),   // Usage Page: Vendor Defined 0xff00
+    USAGE(1, 0x22),              // Usage: Vendor Defined 0x22
+    LOGICAL_MIN(1, 0x00),        // Logical Min: 0
+    LOGICAL_MAX(2, 0xff, 0x00),  // Logical Max: 255
+    REPORT_SIZE(1, 0x08),        // Report Size: 8 bits
+    REPORT_COUNT(1, 0x34),       // Report Count: 52
+    INPUT(1, 0x02),              // Input: Data, Variable, Absolute
+
+    REPORT_ID(1, 0x02),    // Report ID: 0x02
+    USAGE(1, 0x23),        // Usage: Vendor Defined 0x23
+    REPORT_COUNT(1, 0x2f), // Report Count: 47
+    OUTPUT(1, 0x02),       // Output: Data, Variable, Absolute
+
+    REPORT_ID(1, 0x05),    // Report ID: 0x05
+    USAGE(1, 0x33),        // Usage: Vendor Defined 0x33
+    REPORT_COUNT(1, 0x28), // Report Count: 40
+    FEATURE(1, 0x02),      // Feature: Data, Variable, Absolute
+
+    REPORT_ID(1, 0x08),    // Report ID: 0x08
+    USAGE(1, 0x34),        // Usage: Vendor Defined 0x34
+    REPORT_COUNT(1, 0x2f), // Report Count: 47
+    FEATURE(1, 0x02),      // Feature: Data, Variable, Absolute
+
+    REPORT_ID(1, 0x09),    // Report ID: 0x09
+    USAGE(1, 0x24),        // Usage: Vendor Defined 0x24
+    REPORT_COUNT(1, 0x13), // Report Count: 19
+    FEATURE(1, 0x02),      // Feature: Data, Variable, Absolute
+
+    REPORT_ID(1, 0x0a),    // Report ID: 0x0a
+    USAGE(1, 0x25),        // Usage: Vendor Defined 0x25
+    REPORT_COUNT(1, 0x1a), // Report Count: 26
+    FEATURE(1, 0x02),      // Feature: Data, Variable, Absolute
+
+    REPORT_ID(1, 0x0b),    // Report ID: 0x0b
+    USAGE(1, 0x41),        // Usage: Vendor Defined 0x41
+    REPORT_COUNT(1, 0x29), // Report Count: 41
+    FEATURE(1, 0x02),      // Feature: Data, Variable, Absolute
+
+    REPORT_ID(1, 0x0c),    // Report ID: 0x0c
+    USAGE(1, 0x42),        // Usage: Vendor Defined 0x42
+    REPORT_COUNT(1, 0x29), // Report Count: 41
+    FEATURE(1, 0x02),      // Feature: Data, Variable, Absolute
+
+    REPORT_ID(1, 0x20),    // Report ID: 0x20
+    USAGE(1, 0x26),        // Usage: Vendor Defined 0x26
+    REPORT_COUNT(1, 0x3f), // Report Count: 63
+    FEATURE(1, 0x02),      // Feature: Data, Variable, Absolute
+
+    REPORT_ID(1, 0x21),    // Report ID: 0x21
+    USAGE(1, 0x27),        // Usage: Vendor Defined 0x27
+    REPORT_COUNT(1, 0x04), // Report Count: 4
+    FEATURE(1, 0x02),      // Feature: Data, Variable, Absolute
+
+    REPORT_ID(1, 0x22),    // Report ID: 0x22
+    USAGE(1, 0x40),        // Usage: Vendor Defined 0x40
+    REPORT_COUNT(1, 0x3f), // Report Count: 63
+    FEATURE(1, 0x02),      // Feature: Data, Variable, Absolute
+
+    REPORT_ID(1, 0x80),    // Report ID: 0x80
+    USAGE(1, 0x28),        // Usage: Vendor Defined 0x28
+    REPORT_COUNT(1, 0x3f), // Report Count: 63
+    FEATURE(1, 0x02),      // Feature: Data, Variable, Absolute
+
+    REPORT_ID(1, 0x81),    // Report ID: 0x81
+    USAGE(1, 0x29),        // Usage: Vendor Defined 0x29
+    REPORT_COUNT(1, 0x3f), // Report Count: 63
+    FEATURE(1, 0x02),      // Feature: Data, Variable, Absolute
+
+    REPORT_ID(1, 0x82),    // Report ID: 0x82
+    USAGE(1, 0x2a),        // Usage: Vendor Defined 0x2a
+    REPORT_COUNT(1, 0x09), // Report Count: 9
+    FEATURE(1, 0x02),      // Feature: Data, Variable, Absolute
+
+    REPORT_ID(1, 0x83),    // Report ID: 0x83
+    USAGE(1, 0x2b),        // Usage: Vendor Defined 0x2b
+    REPORT_COUNT(1, 0x3f), // Report Count: 63
+    FEATURE(1, 0x02),      // Feature: Data, Variable, Absolute
+
+    REPORT_ID(1, 0x84),    // Report ID: 0x84
+    USAGE(1, 0x2c),        // Usage: Vendor Defined 0x2c
+    REPORT_COUNT(1, 0x3f), // Report Count: 63
+    FEATURE(1, 0x02),      // Feature: Data, Variable, Absolute
+
+    REPORT_ID(1, 0x85),    // Report ID: 0x85
+    USAGE(1, 0x2d),        // Usage: Vendor Defined 0x2d
+    REPORT_COUNT(1, 0x02), // Report Count: 2
+    FEATURE(1, 0x02),      // Feature: Data, Variable, Absolute
+
+    REPORT_ID(1, 0xa0),    // Report ID: 0xa0
+    USAGE(1, 0x2e),        // Usage: Vendor Defined 0x2e
+    REPORT_COUNT(1, 0x01), // Report Count: 1
+    FEATURE(1, 0x02),      // Feature: Data, Variable, Absolute
+
+    REPORT_ID(1, 0xe0),    // Report ID: 0xe0
+    USAGE(1, 0x2f),        // Usage: Vendor Defined 0x2f
+    REPORT_COUNT(1, 0x3f), // Report Count: 63
+    FEATURE(1, 0x02),      // Feature: Data, Variable, Absolute
+
+    REPORT_ID(1, 0xf0),    // Report ID: 0xf0
+    USAGE(1, 0x30),        // Usage: Vendor Defined 0x30
+    REPORT_COUNT(1, 0x3f), // Report Count: 63
+    FEATURE(1, 0x02),      // Feature: Data, Variable, Absolute
+
+    REPORT_ID(1, 0xf1),    // Report ID: 0xf1
+    USAGE(1, 0x31),        // Usage: Vendor Defined 0x31
+    REPORT_COUNT(1, 0x3f), // Report Count: 63
+    FEATURE(1, 0x02),      // Feature: Data, Variable, Absolute
+
+    REPORT_ID(1, 0xf2),    // Report ID: 0xf2
+    USAGE(1, 0x32),        // Usage: Vendor Defined 0x32
+    REPORT_COUNT(1, 0x0f), // Report Count: 15
+    FEATURE(1, 0x02),      // Feature: Data, Variable, Absolute
+
+    REPORT_ID(1, 0xf4),    // Report ID: 0xf4
+    USAGE(1, 0x35),        // Usage: Vendor Defined 0x35
+    REPORT_COUNT(1, 0x3f), // Report Count: 63
+    FEATURE(1, 0x02),      // Feature: Data, Variable, Absolute
+
+    REPORT_ID(1, 0xf5),    // Report ID: 0xf5
+    USAGE(1, 0x36),        // Usage: Vendor Defined 0x36
+    REPORT_COUNT(1, 0x03), // Report Count: 3
+    FEATURE(1, 0x02),      // Feature: Data, Variable, Absolute
+    END_COLLECTION,        // End Collection
 };
 
 static u32 get_hid_report_desc_len(u32 index)
 {
     u32 len = 0;
-    len = sizeof(sHIDReportDesc);
+    len = sizeof(sDS5HIDReportDesc);
     return len;
 }
 
 static void *get_hid_report_desc(u32 index)
 {
     u8 *ptr  = NULL;
-    ptr = (u8 *)sHIDReportDesc;
+    ptr = (u8 *)sDS5HIDReportDesc;
     return ptr;
 }
 
@@ -139,6 +298,38 @@ void custom_hid_set_rx_hook(const usb_dev usb_id, void *priv, void (*rx_hook)(co
         custom_hid_info[usb_id]->hid_rx_hook = rx_hook;
     }
 }
+
+void custom_hid_set_get_report_hook(const usb_dev usb_id, void *priv, void (*get_report_hook)(const usb_dev usb_id, void *priv, u8 *buf, u32 len))
+{
+    if (custom_hid_info[usb_id]) {
+        custom_hid_info[usb_id]->get_report_priv = priv;
+        custom_hid_info[usb_id]->get_report_hook = get_report_hook;
+    }
+}
+
+void custom_hid_set_set_report_hook(const usb_dev usb_id, void *priv, void (*set_report_hook)(const usb_dev usb_id, void *priv, u8 *buf, u32 len))
+{
+    if (custom_hid_info) {
+        custom_hid_info[usb_id]->set_report_priv = priv;
+        custom_hid_info[usb_id]->set_report_hook = set_report_hook;
+    }
+}
+
+static u32 custom_hid_recv_output_report(struct usb_device_t *usb_device, struct usb_ctrlrequest *setup)
+{
+    const usb_dev usb_id = usb_device2id(usb_device);
+
+    u8 read_ep[setup->wLength];
+    usb_read_ep0(usb_id, read_ep, MIN(sizeof(read_ep), setup->wLength));
+
+    custom_hid_info[usb_id]->set_report_hook(usb_id,
+        custom_hid_info[usb_id]->set_report_priv,
+                                    read_ep,
+                                    setup->wLength);
+
+    return USB_EP0_STAGE_SETUP;
+}
+
 
 static u8 *custom_hid_ep_in_dma[USB_MAX_HW_NUM];
 static u8 *custom_hid_ep_out_dma[USB_MAX_HW_NUM];
@@ -237,16 +428,26 @@ static u32 custom_hid_itf_hander(struct usb_device_t *usb_device, struct usb_ctr
             usb_set_setup_phase(usb_device, USB_EP0_STAGE_SETUP);
             custom_hid_info[usb_id]->cfg_done = 1;
             break;
-        case USB_REQ_GET_IDLE:
-            tx_len = 1;
-            tx_payload[0] = 0;
-            usb_set_data_payload(usb_device, req, tx_payload, tx_len);
-            break;
         case USB_REQ_GET_REPORT:
-            tx_len = get_hid_report_desc_len(req->wIndex);
-            tx_payload = get_hid_report_desc(req->wIndex);
-            usb_set_data_payload(usb_device, req, tx_payload, tx_len);
+            if (custom_hid_info && custom_hid_info[usb_id]->get_report_hook) {
+                tx_len = req->wLength;
+                custom_hid_info[usb_id]->get_report_hook(usb_id,
+                    custom_hid_info[usb_id]->get_report_priv,
+                                                tx_payload,
+                                                tx_len);
+                usb_set_data_payload(usb_device, req, tx_payload, tx_len);
+            } else {
+                log_error("custom hid GET_REPORT haven't Hook. STALL");
+                usb_set_setup_phase(usb_device, USB_EP0_SET_STALL);
+            }
             break;
+        case USB_REQ_SET_REPORT:
+            if (custom_hid_info && custom_hid_info[usb_id]->set_report_hook) {
+                usb_set_setup_recv(usb_device, custom_hid_recv_output_report);
+            } else {
+                log_error("custom hid SET_REPORT haven't Hook. STALL");
+                usb_set_setup_phase(usb_device, USB_EP0_SET_STALL);
+            }
         }//bRequest @ USB_TYPE_CLASS
         break;
 

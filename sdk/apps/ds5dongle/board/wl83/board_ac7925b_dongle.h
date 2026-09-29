@@ -132,4 +132,35 @@
 #define TCFG_STATUS_LED_IO                  IO_PORTA_15
 #define TCFG_STATUS_LED_ACTIVE_LEVEL        1
 
+//*********************************************************************************//
+//                                  USB配置                                        //
+//*********************************************************************************//
+#define TCFG_FUSB_DEVICE                    BIT(0)
+#define TCFG_HUSB_DEVICE                    BIT(1)
+#define TCFG_USB_DEVICE                     (TCFG_HUSB_DEVICE | TCFG_FUSB_DEVICE)
+
+//*********************************************************************************//
+//                                USB从机配置                                      //
+//*********************************************************************************//
+#define TCFG_PC_ENABLE                      1              //使用USB从机功能一定要打开
+#define USB_MALLOC_ENABLE                   1
+#define USB_DEVICE_CLASS_CONFIG             (AUDIO_CLASS | CUSTOM_HID_CLASS)
+#define USB_DEVICE_CLASS_CONFIG_2_0         (AUDIO_CLASS | CUSTOM_HID_CLASS)
+#define SPK_CHANNEL                         4
+#define MIC_CHANNEL                         2
+
+#include "usb_std_class_def.h"
+#include "usb_common_def.h"
+
+#if (USB_DEVICE_CLASS_CONFIG & SPEAKER_CLASS) || (USB_DEVICE_CLASS_CONFIG_2_0 & SPEAKER_CLASS)
+#define TCFG_USB_SLAVE_AUDIO_SPK_ENABLE     1              // UAC从机SPK使能
+#else
+#define TCFG_USB_SLAVE_AUDIO_SPK_ENABLE     0              // UAC从机SPK使能
+#endif
+#if (USB_DEVICE_CLASS_CONFIG & MIC_CLASS) || (USB_DEVICE_CLASS_CONFIG_2_0 & MIC_CLASS)
+#define TCFG_USB_SLAVE_AUDIO_MIC_ENABLE     1              // UAC从机MIC使能
+#else
+#define TCFG_USB_SLAVE_AUDIO_MIC_ENABLE     0              // UAC从机MIC使能
+#endif
+
 #endif

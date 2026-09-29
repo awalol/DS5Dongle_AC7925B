@@ -233,6 +233,17 @@ c_SRC_FILES := \
 	../../../../cpu/wl83/debug_exception.c \
 	../../../../cpu/wl83/setup.c \
 	../../../../apps/common/usb/device/msd_upgrade.c \
+	../../../../apps/common/usb/device/custom_hid.c \
+	../../../../apps/common/usb/device/descriptor.c \
+	../../../../apps/common/usb/device/uac.c \
+	../../../../apps/common/usb/device/uac1.c \
+	../../../../apps/common/usb/device/uac_stream.c \
+	../../../../apps/common/usb/device/usb_device.c \
+	../../../../apps/common/usb/device/user_setup.c \
+	../../../../apps/common/usb/usb_config.c \
+	../../../../apps/common/usb/usb_epbuf_manager.c \
+	../../../../apps/ds5dongle/usb.c \
+	../../../../apps/ds5dongle/common/ds5_bt.c \
 	../../../../apps/ds5dongle/bt.c \
 	../../../../apps/ds5dongle/common/uart_cmd.c \
 	../../../../apps/ds5dongle/ibtstack.c \
