@@ -243,6 +243,8 @@ c_SRC_FILES := \
 	../../../../apps/common/usb/usb_config.c \
 	../../../../apps/common/usb/usb_epbuf_manager.c \
 	../../../../apps/ds5dongle/usb.c \
+	../../../../apps/ds5dongle/common/queue.c \
+	../../../../apps/ds5dongle/common/crc.c \
 	../../../../apps/ds5dongle/common/ds5_bt.c \
 	../../../../apps/ds5dongle/bt.c \
 	../../../../apps/ds5dongle/common/uart_cmd.c \
@@ -364,7 +366,7 @@ LINK_AT ?= 1
 # 表示下面的不是一个文件的名字，无论是否存在 all, clean, pre_build 这样的文件
 # 还是要执行命令
 # see: https://www.gnu.org/software/make/manual/html_node/Phony-Targets.html
-.PHONY: all clean pre_build
+.PHONY: all clean pre_build force_build_stamp
 
 # 不要使用 make 预设置的规则
 # see: https://www.gnu.org/software/make/manual/html_node/Suffix-Rules.html
@@ -372,7 +374,15 @@ LINK_AT ?= 1
 
 all: pre_build $(OUT_ELF)
 	$(info +POST-BUILD)
+ifneq ($(OS), Windows_NT)
+	$(QUITE) $(OBJDUMP) -d -print-imm-hex $(OUT_ELF) > $(OUT_ELF:.elf=.lst)
+endif
 	$(QUITE) $(RUN_POST_SCRIPT) sdk
+
+# app_main prints __DATE__/__TIME__; refresh it even on incremental builds.
+$(BUILD_DIR)/apps/ds5dongle/app_main.c.o: force_build_stamp
+
+force_build_stamp:
 
 pre_build:
 	$(info +PRE-BUILD)

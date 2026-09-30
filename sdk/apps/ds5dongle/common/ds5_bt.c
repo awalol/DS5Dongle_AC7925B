@@ -10,7 +10,10 @@
 #include "debug.h"
 
 #include "ds5_bt.h"
+
+#include "bt.h"
 #include "ibtstack.h"
+#include "timer.h"
 
 struct report
 {
@@ -25,7 +28,7 @@ void ds5_hid_input_report(const u8 *packet, u16 size) {
     (void) packet;
     (void) size;
 
-    /*static u32 start_ms;
+    static u32 start_ms;
     static u32 packets;
     static bool initialized;
     const u32 log_interval_ms = 1000; // 输出间隔，单位 ms
@@ -45,9 +48,12 @@ void ds5_hid_input_report(const u8 *packet, u16 size) {
         log_info("HID Interrupt RX: packets=%u, interval=%u ms, rate=%u.%u Hz",
                  (unsigned int)packets, (unsigned int)elapsed_ms,
                  (unsigned int)(rate_x10 / 10U), (unsigned int)(rate_x10 % 10U));
+
+        // log_debug_hexdump(packet,size);
+
         start_ms = now_ms;
         packets = 0;
-    }*/
+    }
 
 
 }
@@ -61,5 +67,8 @@ void ds5_hid_control_data(const u8 *packet, u16 size) {
 }
 
 void ds5_on_connected(void) {
-
+    bt_hid_control_get(0x05);
+    bt_hid_control_get(0x09);
+    bt_hid_control_get(0x20);
+    bt_hid_control_get(0x22);
 }

@@ -15,12 +15,14 @@
 #include "event/bt_event.h"
 #include "hci_event.h"
 #include "ibtstack.h"
+#include "queue.h"
 
 #define LOG_TAG             "[AC7925B_BT]"
 #define LOG_ERROR_ENABLE
 #define LOG_WARN_ENABLE
 #define LOG_INFO_ENABLE
 #define LOG_DEBUG_ENABLE
+#include "crc.h"
 #include "debug.h"
 #include "ds5_bt.h"
 #include "ble/hci_ll.h"
@@ -35,12 +37,27 @@
 
 static bool bt_ready;
 static bool bt_searching;
+static bool bt_acl_connected;
 static bool new_pair;
 static bd_addr_t current_device_addr;
 static u16 hid_control_cid;
 static u16 hid_interrupt_cid;
 static bool hid_control_pending;    // Control 通道创建请求已提交，等待结果，防止 CID 未返回时重复创建
 static bool hid_interrupt_pending;  // Interrupt 通道创建请求已提交，等待结果，防止 CID 未返回时重复创建
+static queue_t interrupt_queue;
+static queue_t control_queue;
+
+typedef struct
+{
+    u8 data[640];
+    size_t len;
+} interrupt_element;
+
+typedef struct
+{
+    u8 data[65]; // HIDProfile + Data
+    size_t len;
+} control_element;
 
 static const char ds5_device_name[] = "DualSense Wireless Controller";
 
@@ -53,9 +70,10 @@ static void l2cap_packet_handler(u8 packet_type, u16 channel,
 
 /* Inquiry searches for peers; page scan lets a paired controller reconnect.
  * Call only after stack init and with bt_searching cleared.
- * bt_get_total_connect_dev() excludes paging, so also check new_pair. */
+ * Raw HID ACL connections need their own state; the SDK's profile-based
+ * connection count is not sufficient to decide whether to start scanning. */
 static void bt_enable_reconnect(void) {
-    if (new_pair || bt_get_total_connect_dev()) {
+    if (bt_acl_connected || new_pair || bt_get_total_connect_dev()) {
         return;
     }
 
@@ -65,13 +83,32 @@ static void bt_enable_reconnect(void) {
              scan_ret, conn_ret);
 }
 
+static void bt_stop_inquiry(void) {
+    if (!bt_searching) {
+        return;
+    }
+
+    /* An incoming ACL can complete while our inquiry is still running.
+     * Clearing the application flag alone leaves its controller timers live. */
+    u32 ret = bt_emitter_cmd_prepare(USER_CTRL_INQUIRY_CANCEL, 0, NULL);
+    if (ret) {
+        log_error("cancel inquiry command failed: 0x%x", ret);
+        return; /* Keep the flag so the next connection event can retry. */
+    }
+    bt_searching = false;
+    log_info("inquiry cancel requested after ACL connection");
+}
+
 static void bt_reset_connection(void) {
     bt_searching = false;
+    bt_acl_connected = false;
     new_pair = false;
     hid_control_cid = 0;
     hid_interrupt_cid = 0;
     hid_control_pending = false;
     hid_interrupt_pending = false;
+    queue_reset(&control_queue);
+    queue_reset(&interrupt_queue);
     bt_enable_reconnect();
 }
 
@@ -177,10 +214,12 @@ static void bt_l2cap_handle_channel_closed(const u8 *packet, u16 size) {
     u16 local_cid = l2cap_event_channel_closed_get_local_cid(packet);
     if (local_cid == hid_control_cid) {
         hid_control_cid = 0;
+        queue_reset(&control_queue);
         log_info("HID Control closed");
     }
     if (local_cid == hid_interrupt_cid) {
         hid_interrupt_cid = 0;
+        queue_reset(&interrupt_queue);
         log_info("HID Interrupt closed");
     }
 }
@@ -216,6 +255,59 @@ static void bt_l2cap_handle_incoming(const u8 *packet, u16 size) {
     log_info("accept incoming HID PSM 0x%x, cid 0x%x", psm, local_cid);
 }
 
+static void bt_l2cap_handle_credits(const u8 *packet, u16 size)
+{
+    if (size < 5) {
+        log_error("short L2CAP credits event: %u", size);
+        return;
+    }
+
+    u16 local_cid = l2cap_event_can_send_now_get_local_cid(packet);
+    if (local_cid == hid_control_cid)
+    {
+        control_element pkt;
+        bool sent = false;
+        if (queue_peek(&control_queue, &pkt))
+        {
+            log_debug("L2CAP credits: send control cid=0x%04X", local_cid);
+            int status = l2cap_send(local_cid, pkt.data, (u16)pkt.len);
+            if (status == 0)
+            {
+                queue_pop(&control_queue, NULL);
+                sent = true;
+            } else
+            {
+                log_error("L2CAP control send failed: %d", status);
+            }
+        }
+        if (sent && queue_count(&control_queue))
+        {
+            stack_handout_credit(1);
+        }
+    }else if (local_cid == hid_interrupt_cid)
+    {
+        interrupt_element pkt;
+        bool sent = false;
+        if (queue_peek(&interrupt_queue, &pkt))
+        {
+            log_debug("L2CAP credits: send interrupt cid=0x%04X", local_cid);
+            int status = l2cap_send(local_cid, pkt.data, (u16)pkt.len);
+            if (status == 0)
+            {
+                queue_pop(&interrupt_queue, NULL);
+                sent = true;
+            } else
+            {
+                log_error("L2CAP interrupt send failed: %d", status);
+            }
+        }
+        if (sent && queue_count(&interrupt_queue))
+        {
+            stack_handout_credit(1);
+        }
+    }
+}
+
 static void l2cap_packet_handler(u8 packet_type, u16 channel,
                                  u8 *packet, u16 size) {
     if (!packet || !size) {
@@ -246,6 +338,9 @@ static void l2cap_packet_handler(u8 packet_type, u16 channel,
         case L2CAP_EVENT_INCOMING_CONNECTION:
             bt_l2cap_handle_incoming(packet, size);
             break;
+        case L2CAP_EVENT_CREDITS:
+            bt_l2cap_handle_credits(packet, size);
+            break;
         default:
             break;
     }
@@ -257,6 +352,10 @@ static void l2cap_packet_handler(u8 packet_type, u16 channel,
 
 static u8 bt_ds5_inquiry_result(char *name, u8 name_len, u8 *addr,
                                 u32 dev_class, char rssi) {
+    /* Results queued before cancellation must not start a second page. */
+    if (bt_acl_connected) {
+        return FALSE;
+    }
     char display_name[64] = {0};
     u8 copy_len = name_len;
 
@@ -290,9 +389,9 @@ void bt_start_inquiry(void) {
     u8 inquiry_length = DS5_INQUIRY_LENGTH;
 
     u8 connected = bt_get_total_connect_dev();
-    if (!bt_ready || bt_searching || connected || new_pair) {
+    if (!bt_ready || bt_searching || bt_acl_connected || connected || new_pair) {
         log_info("inquiry skipped: ready=%u searching=%u connected=%u pairing=%u",
-                 bt_ready, bt_searching, connected, new_pair);
+                 bt_ready, bt_searching, bt_acl_connected || connected, new_pair);
         return;
     }
 
@@ -318,13 +417,20 @@ static void bt_read_remote_name(u8 status, u8 *addr, u8 *name) {
 }
 
 //*********************************************************************************//
-//                                   蓝牙初始化                                     //
+//                                   蓝牙初始化                                      //
 //*********************************************************************************//
 
 static int bt_init(void) {
+    queue_init(&interrupt_queue, sizeof(interrupt_element),10);
+    queue_init(&control_queue, sizeof(control_element),10);
+
     bt_max_pwr_set(10, 5, 8, 10);
 
     bt_set_user_ctrl_conn_num(1);
+
+    /* Enable EDR 3 Mbps so full DualSense input reports can fit in 3-DH1. */
+    set_bt_data_rate_acl_3mbs_mode(1);
+    set_bt_enhanced_power_control(1);
 
     bt_set_page_timeout_value(8000);
     bt_set_super_timeout_value(8000);
@@ -348,7 +454,7 @@ static int bt_init(void) {
 }
 
 //*********************************************************************************//
-//                                  蓝牙事件处理                                   //
+//                                  蓝牙事件处理                                     //
 //*********************************************************************************//
 
 static int bt_connection_status_event_handler(void *evt) {
@@ -370,12 +476,15 @@ static int bt_connection_status_event_handler(void *evt) {
         case BT_STATUS_FIRST_CONNECTED:
             log_info("BT_STATUS_FIRST_CONNECTED");
             put_buf(bt->args, 6);
-            bt_searching = false;
+            bt_acl_connected = true;
+            bt_stop_inquiry();
             memcpy(current_device_addr, bt->args,
                    sizeof(current_device_addr));
             break;
         case BT_STATUS_ENCRY_COMPLETE:
             log_info("BT_STATUS_ENCRY_COMPLETE");
+            bt_acl_connected = true;
+            bt_stop_inquiry();
             if (new_pair) {
                 if (btstack_post_callback(bt_l2cap_open_control, NULL)) {
                     log_error("post HID Control connection failed");
@@ -418,7 +527,8 @@ static int bt_hci_event_handler(void *evt) {
             if (bt->value) {
                 bt_reset_connection();
             } else {
-                bt_searching = false;
+                bt_acl_connected = true;
+                bt_stop_inquiry();
             }
             break;
         case HCI_EVENT_DISCONNECTION_COMPLETE:
@@ -454,7 +564,69 @@ static int bt_event_handler(struct application *app, struct sys_event *event) {
 }
 
 //*********************************************************************************//
-//                               应用生命周期与注册                                //
+//                              HID / L2CAP 对外发送接口                             //
+//*********************************************************************************//
+
+void bt_hid_control_set(const u8 *data, u16 size)
+{
+    if (!hid_control_cid) return;
+    control_element pkt;
+    if (!data || size < 4 || size > sizeof(pkt.data) - 1) {
+        log_error("invalid HID control report size: %u", size);
+        return;
+    }
+    pkt.data[0] = 0x53;
+    memcpy(pkt.data + 1, data, size);
+    fill_feature_report_checksum(pkt.data + 1, size);
+    pkt.len = 1 + size;
+    if (!queue_push(&control_queue,&pkt))
+    {
+        log_error("bt_hid_control_set queue push failed");
+        return;
+    }
+    stack_handout_credit(1);
+}
+
+void bt_hid_control_get(const u8 reportId)
+{
+    if (!hid_control_cid) return;
+    log_debug("bt_hid_control_get reportId=0x%02X", reportId);
+
+    control_element pkt;
+    pkt.data[0] = 0x43;
+    pkt.data[1] = reportId;
+    pkt.len = 2;
+    if (!queue_push(&control_queue,&pkt))
+    {
+        log_error("bt_hid_control_get queue push failed");
+        return;
+    }
+    log_debug("bt_hid_control_get wake sender");
+    stack_handout_credit(1);
+}
+
+void bt_hid_interrupt_send(const u8 *data, u16 size)
+{
+    if (!hid_interrupt_cid) return;
+    interrupt_element pkt;
+    if (!data || size < 4 || size > sizeof(pkt.data) - 1) {
+        log_error("invalid HID interrupt report size: %u", size);
+        return;
+    }
+    pkt.data[0] = 0xA2;
+    memcpy(pkt.data + 1, data, size);
+    fill_output_report_checksum(pkt.data + 1, size);
+    pkt.len = 1 + size;
+    if (!queue_push(&interrupt_queue,&pkt))
+    {
+        log_error("bt_hid_interrupt_send queue push failed");
+        return;
+    }
+    stack_handout_credit(1);
+}
+
+//*********************************************************************************//
+//                               应用生命周期与注册                                   //
 //*********************************************************************************//
 
 static int app_state_machine(struct application *app, enum app_state state,

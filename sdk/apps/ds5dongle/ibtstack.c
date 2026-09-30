@@ -11,6 +11,7 @@ extern void l2cap_register_service_internal(void *connection,
         btstack_packet_handler_t packet_handler, u16 psm, u16 mtu);
 extern void l2cap_accept_connection_internal(u16 local_cid);
 extern void l2cap_decline_connection_internal(u16 local_cid, u8 reason);
+extern int l2cap_send_internal(u16 local_cid, u8 *data, u16 len, u8 flag);
 
 u16 l2cap_create_channel(btstack_packet_handler_t packet_handler,
                                   bd_addr_t addr, u16 psm, u16 mtu)
@@ -32,6 +33,11 @@ void l2cap_accept_connection(u16 local_cid)
 void l2cap_decline_connection(u16 local_cid, u8 reason)
 {
     l2cap_decline_connection_internal(local_cid, reason);
+}
+
+int l2cap_send(u16 local_cid, u8 *data, u16 len)
+{
+    return l2cap_send_internal(local_cid, data, len, 0);
 }
 
 /* btstack.a 的弱函数（默认空实现）：收到对端 IO Capability Response 时调用。

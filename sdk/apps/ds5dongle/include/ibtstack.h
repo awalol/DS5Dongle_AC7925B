@@ -18,8 +18,10 @@
 #ifndef L2CAP_EVENT_INCOMING_CONNECTION
 #define L2CAP_EVENT_INCOMING_CONNECTION      0x72
 #endif
-#ifndef L2CAP_EVENT_CAN_SEND_NOW
-#define L2CAP_EVENT_CAN_SEND_NOW              0x78
+#ifndef L2CAP_EVENT_CREDITS
+/* Jieli Classic L2CAP send-ready notification.  The last byte contains the
+ * controller credit indication; local_cid is stored at offsets 2..3. */
+#define L2CAP_EVENT_CREDITS                  0x74
 #endif
 
 #define L2CAP_CONNECTION_REFUSED_RESOURCES   0x04
@@ -31,8 +33,16 @@ void l2cap_register_service(btstack_packet_handler_t packet_handler,
 void l2cap_accept_connection(u16 local_cid);
 void l2cap_decline_connection(u16 local_cid, u8 reason);
 u16 l2cap_get_remote_mtu_for_local_cid(u16 local_cid);
-int l2cap_can_send_packet_now(u16 local_cid);
-void l2cap_request_can_send_now_event(u16 local_cid);
-int l2cap_send(u16 local_cid, u8 *data, u16 len);
+
+/* Classic Basic Mode adapter.  The SDK's exported l2cap_send is an LE
+ * credit-based API.  Keep the source-level API while using a distinct link
+ * symbol, then let ibtstack.c forward it to the internal Classic ABI. */
+int l2cap_send(u16 local_cid, u8 *data, u16 len)
+        __asm__("ds5_classic_l2cap_send");
+/* AC792 btstack_task.c: immediate=1 posts the Classic credit-dispatch
+ * message. stack_run_loop_resume() only runs registered profile callbacks,
+ * so it cannot kick an application queue consumed by L2CAP_EVENT_CREDITS.
+ * Dispatch is asynchronous and sends from the btstack task. */
+void stack_handout_credit(u8 immediate);
 
 #endif
