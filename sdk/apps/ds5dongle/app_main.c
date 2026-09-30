@@ -120,7 +120,7 @@ static void ds5dongle_task(void *p)
  */
 void app_main(void)
 {
-    printf("\n\n\n ------------ds5dongle run %s-------------\n\n\n", __TIME__);
+    printf("\n\n\n ------------ds5dongle run %s %s-------------\n\n\n", __DATE__, __TIME__);
 
     struct intent it;
     init_intent(&it);

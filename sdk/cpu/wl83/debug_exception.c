@@ -12,9 +12,13 @@
 #define LOG_CLI_ENABLE
 #include "debug.h"
 
+#ifdef CONFIG_EXCEPTION_SAVED_CONTEXT
+#define EXPCPTION_IN_SRAM    1
+#else
 #define EXPCPTION_IN_SRAM    0  //exception代码放在sram中。如果出现死机不
 //                                复位的情况务必需要打开，防止flash挂了,
 //                                进入异常函数失败复位不了
+#endif
 #define DEBUG_UART           JL_UART0
 
 #if EXPCPTION_IN_SRAM && defined CONFIG_SAVE_EXCEPTION_LOG_IN_FLASH
@@ -407,17 +411,23 @@ u32 get_debug_dev_id(const char *name)
 
 
 #if EXPCPTION_IN_SRAM
-static u32 deb_power(u8 x, u8 n)
+static u8 deb_uart_failed;
+
+static void deb_wait_tx(void)
 {
-    u64 result = 1;
-    for (int i = 0; i < n; i++) {
-        result *= x;
+    /* Do not hang the reset path if the debug UART itself stops working. */
+    u32 timeout = 1000000;
+    while (!(DEBUG_UART->CON0 & BIT(15)) && --timeout) {
+        __asm__ volatile("nop");
     }
-    return (u32)result;
+    if (!timeout) {
+        deb_uart_failed = 1;
+    }
 }
+
 static void deb_putchar(char c)
 {
-    if (DEBUG_UART->CON0 & BIT(0)) {
+    if (!deb_uart_failed && (DEBUG_UART->CON0 & BIT(0))) {
         if (c == '\r') {
             return;
         }
@@ -425,12 +435,15 @@ static void deb_putchar(char c)
             DEBUG_UART->CON0 |= BIT(13);
             DEBUG_UART->BUF = '\r';
             __asm_csync();
-            while ((DEBUG_UART->CON0 & BIT(15)) == 0);
+            deb_wait_tx();
+            if (deb_uart_failed) {
+                return;
+            }
         }
         DEBUG_UART->CON0 |= BIT(13);
         DEBUG_UART->BUF = c;
         __asm_csync();
-        while ((DEBUG_UART->CON0 & BIT(15)) == 0);
+        deb_wait_tx();
     }
 }
 static void deb_putu4hex(u8 dat)
@@ -442,39 +455,23 @@ static void deb_putu4hex(u8 dat)
         deb_putchar(dat + '0');
     }
 }
-static void deb_puthex(u32 value)
+static void deb_putnum(u32 value, u8 base, u8 width, char pad)
 {
-    u8 start_flag = 0;
-    if (value) {
-        for (u8 i = 8; i > 0; i--) {
-            u8 tmp = 4 * (i - 1);
-            u8 dat = ((value & 0xf << tmp) >> tmp);
-            if (dat || start_flag) {
-                deb_putu4hex(dat);
-                start_flag = 1;
-            }
-        }
-    } else  {
-        deb_putu4hex(0);
+    u8 digits[10];
+    u8 count = 0;
+    do {
+        digits[count++] = value % base;
+        value /= base;
+    } while (value);
+    while (width > count) {
+        deb_putchar(pad);
+        width--;
+    }
+    while (count) {
+        deb_putu4hex(digits[--count]);
     }
 }
-static void deb_putdec(u32 value)
-{
-    u8 start_flag = 0;
-    if (value) {
-        for (u8 i = 9; i > 0; i--) {
-            u32 tmp = deb_power(10, i - 1);
-            u8 dat = (value / tmp % 10);
-            if (dat || start_flag) {
-                deb_putu4hex(dat);
-                start_flag = 1;
-            }
-        }
-    } else  {
-        deb_putu4hex(0);
-    }
-}
-static void deb_putstr(char *str)
+static void deb_putstr(const char *str)
 {
     if (str == NULL) {
         return;
@@ -498,7 +495,7 @@ static void deb_putbuf(u8 *buf, u32 len)
         }
     }
 }
-static void deb_printf(char *format, ...)
+static void deb_printf(const char *format, ...)
 {
     va_list args;
 
@@ -507,20 +504,45 @@ static void deb_printf(char *format, ...)
     for (; *format != 0; ++format) {
         if (*format == '%') {
             ++format;
+            char pad = ' ';
+            u8 width = 0;
+            if (*format == '0') {
+                pad = '0';
+                ++format;
+            }
+            while (*format >= '0' && *format <= '9') {
+                unsigned int next = width * 10U + (*format++ - '0');
+                width = next > 32 ? 32 : next;
+            }
+            if (!*format) {
+                break;
+            }
             if (*format == 's') {
-                char *s = (char *)va_arg(args, int);
+                const char *s = va_arg(args, const char *);
                 deb_putstr(s ? s : "(null)");
                 continue;
             }
             if (*format == 'd') {
-                deb_putdec(va_arg(args, int));
+                int value = va_arg(args, int);
+                u32 magnitude = (u32)value;
+                if (value < 0) {
+                    deb_putchar('-');
+                    magnitude = 0U - magnitude;
+                    if (width) {
+                        --width;
+                    }
+                }
+                deb_putnum(magnitude, 10, width, pad);
                 continue;
             }
-            if (*format == 'x') {
-                deb_puthex(va_arg(args, int));
+            if (*format == 'u' || *format == 'x') {
+                deb_putnum(va_arg(args, unsigned int), *format == 'x' ? 16 : 10,
+                           width, pad);
                 continue;
             }
-
+            if (*format == '%') {
+                deb_putchar('%');
+            }
         } else {
             deb_putchar(*format);
         }
@@ -614,6 +636,187 @@ static int exception_printf(const char *format, ...)
 
 #endif
 
+static void exception_dump_dcache(void)
+{
+#if EXPCPTION_IN_SRAM
+    /* DcuEmuMessage takes a lock and uses the ordinary logger. Its owner
+     * may be the paused core, so decode the register directly here. */
+    u32 msg = JL_L1P->EMU_MSG;
+    EXCEPTION_PRINTF("JL_L1P->EMU_MSG:0x%x", msg);
+    for (u32 i = 0; i < ARRAY_SIZE(dcache_emu_msg); i++) {
+        if (msg & BIT(i)) {
+            EXCEPTION_PRINTF("[X-DCACHE] emu err msg : %s", dcache_emu_msg[i]);
+        }
+    }
+#else
+    DcuEmuMessage();
+#endif
+}
+
+#ifdef CONFIG_EXCEPTION_SAVED_CONTEXT
+/* A system exception can enter both cores. The peer's live registers may
+ * already belong to exception_analyze, so publish the hardware-saved frame
+ * before either core pauses its peer. Frames stay on the exception stacks
+ * until reset. A NULL slot means that core was paused before publication. */
+static unsigned int *volatile exception_saved_frames[CPU_CORE_NUM];
+static volatile u8 exception_output_claimed;
+
+static u32 exception_claim_output(void)
+{
+    u32 claimed;
+    /* Same atomic testset as arch_spin_lock, but never wait for a peer
+     * which may already be paused. This latch is only cleared by reboot. */
+    __asm__ volatile(
+        "%0 = 0\n\t"
+        "testset b[%1]\n\t"
+        "ifeq goto 1f\n\t"
+        "%0 = 1\n\t"
+        "1: csync\n\t"
+        : "=&r"(claimed)
+        : "r"(&exception_output_claimed)
+        : "memory");
+    return claimed;
+}
+
+static int exception_sram_contains(u32 addr, u32 size)
+{
+#ifdef CONFIG_NO_SDRAM_ENABLE
+    extern u32 HEAP_END;
+    u32 end = (u32)&HEAP_END;
+#else
+    extern u32 RAM_HEAP_END;
+    u32 end = (u32)&RAM_HEAP_END;
+#endif
+    /* Use subtraction after checking the bounds, so a corrupt address or
+     * length cannot wrap the end check. Exclude MMIO and reserved boot RAM. */
+    return addr >= (u32)&ram_text_code_begin && addr < end && size <= end - addr;
+}
+
+static void exception_dump_sram(u32 cpu_id, const char *label, u32 addr, u32 rows)
+{
+    if (addr & 3U) {
+        EXCEPTION_PRINTF("saved cpu %u %s @ %08x: unaligned", cpu_id, label, addr);
+        return;
+    }
+    for (u32 row = 0; row < rows; row++) {
+        if (!exception_sram_contains(addr, 16)) {
+            EXCEPTION_PRINTF("saved cpu %u %s @ %08x: outside SRAM", cpu_id, label, addr);
+            break;
+        }
+        const volatile u32 *words = (const volatile u32 *)addr;
+        EXCEPTION_PRINTF("saved cpu %u %s @ %08x: %08x %08x %08x %08x",
+                         cpu_id, label, addr, words[0], words[1], words[2], words[3]);
+        addr += 16;
+    }
+}
+
+static void exception_dump_saved_context(u32 cpu_id)
+{
+    const unsigned int *frame = exception_saved_frames[cpu_id];
+    if (!frame) {
+        EXCEPTION_PRINTF("saved exception cpu %u: unavailable (paused before capture)", cpu_id);
+        return;
+    }
+
+    EXCEPTION_PRINTF("saved exception cpu %u frame=0x%x:", cpu_id, (u32)frame);
+    for (int r = 0; r < 16; r += 4) {
+        EXCEPTION_PRINTF("R%d=%08x R%d=%08x R%d=%08x R%d=%08x",
+                         r, frame[r], r + 1, frame[r + 1],
+                         r + 2, frame[r + 2], r + 3, frame[r + 3]);
+    }
+    EXCEPTION_PRINTF("saved RETI=%08x RETE=%08x RETX=%08x RETS=%08x",
+                     frame[16], frame[17], frame[18], frame[19]);
+    EXCEPTION_PRINTF("saved PSR=%08x ICFG=%08x USP=%08x SSP=%08x",
+                     frame[20], frame[21], frame[22], frame[23]);
+#if TEE_ENABLE
+    u32 saved_sp = (u32)frame - 24;
+#else
+    u32 saved_sp = frame[24];
+#endif
+    EXCEPTION_PRINTF("saved SP=%08x", saved_sp);
+}
+
+static int exception_flash_contains(u32 addr, u32 size)
+{
+    u32 begin = (u32)&rom_text_code_begin;
+    u32 end = (u32)&rom_text_code_end;
+    return addr >= begin && addr < end && size <= end - addr;
+}
+
+static void exception_dump_flash(u32 cpu_id, const char *label, u32 addr, u32 rows)
+{
+    for (u32 row = 0; row < rows; row++, addr += 16) {
+        if ((addr & 3U) || !exception_flash_contains(addr, 16)) {
+            break;
+        }
+        const volatile u32 *code = (const volatile u32 *)addr;
+        EXCEPTION_PRINTF("saved cpu %u %s @ %08x: %08x %08x %08x %08x",
+                         cpu_id, label, addr, code[0], code[1], code[2], code[3]);
+    }
+}
+
+static void exception_dump_trace_code(u32 cpu_id)
+{
+    /* RETI can disagree with the last branch target. Capture both, so a
+     * subsequent fault can be compared with the exact linked instructions.
+     * These are data reads of Flash, not a dump of the CPU instruction cache. */
+    const u32 trace[] = {
+        q32DSP(cpu_id)->ETM_PC5, q32DSP(cpu_id)->ETM_PC4,
+        q32DSP(cpu_id)->ETM_PC3, q32DSP(cpu_id)->ETM_PC2,
+        q32DSP(cpu_id)->ETM_PC1, q32DSP(cpu_id)->ETM_PC0,
+    };
+    for (u32 i = 0; i < ARRAY_SIZE(trace); i++) {
+        u32 addr = trace[i] & ~0xfU;
+        u32 j;
+        for (j = 0; j < i; j++) {
+            if ((trace[j] & ~0xfU) == addr) {
+                break;
+            }
+        }
+        if (j == i) {
+            exception_dump_flash(cpu_id, "trace code", addr, 2);
+        }
+    }
+}
+
+static void exception_dump_saved_memory(u32 cpu_id)
+{
+    const unsigned int *frame = exception_saved_frames[cpu_id];
+    if (!frame) {
+        return;
+    }
+#if TEE_ENABLE
+    u32 saved_sp = (u32)frame - 24;
+#else
+    u32 saved_sp = frame[24];
+#endif
+
+    /* The observed bad return landed in heap memory. Record bounded SRAM
+     * contents even when the PC is outside the linked executable sections. */
+    u32 addr = frame[16] & ~0xfU;
+    if (exception_sram_contains(addr, 16)) {
+        u32 start = addr;
+        if (addr >= 16 && exception_sram_contains(addr - 16, 16)) {
+            start -= 16;
+        }
+        exception_dump_sram(cpu_id, "PC SRAM", start, 4);
+    } else if (exception_flash_contains(addr, 16)) {
+        u32 start = addr;
+        if (addr - (u32)&rom_text_code_begin >= 16) {
+            start -= 16;
+        }
+        exception_dump_flash(cpu_id, "code", start, 4);
+    } else {
+        EXCEPTION_PRINTF("saved cpu %u code @ %08x: outside readable ranges", cpu_id, addr);
+    }
+    exception_dump_sram(cpu_id, "stack", saved_sp, 8);
+    if (frame[22] != saved_sp) {
+        exception_dump_sram(cpu_id, "USP", frame[22], 8);
+    }
+    exception_dump_trace_code(cpu_id);
+}
+#endif
+
 static void trace_call_stack(void)
 {
     for (int c = 0; c < CPU_CORE_NUM; c++) {
@@ -639,9 +842,31 @@ void dlog_exception_log_to_flash(void)
 
 void exception_analyze(int *sp)
 {
-    log_output_release_deadlock();
-
+#ifdef CONFIG_EXCEPTION_SAVED_CONTEXT
     u32 cpu_id = current_cpu_id();
+    exception_saved_frames[cpu_id] = (unsigned int *)sp;
+    __asm_csync();
+    if (!exception_claim_output()) {
+        /* Publish the original frame, then leave UART and CMD_PAUSE to
+         * the winning core. Otherwise two handlers can pause each other. */
+        while (1) {
+            __asm__ volatile("idle");
+        }
+    }
+#if CPU_CORE_NUM > 1
+    /* Give a simultaneously faulting peer a bounded chance to publish. */
+    for (u32 retry = 0; retry < 1024 && !exception_saved_frames[!cpu_id]; retry++) {
+        __asm__ volatile("nop");
+    }
+#endif
+#endif
+#if !EXPCPTION_IN_SRAM
+    log_output_release_deadlock();
+#endif
+
+#ifndef CONFIG_EXCEPTION_SAVED_CONTEXT
+    u32 cpu_id = current_cpu_id();
+#endif
     q32DSP(!cpu_id)->CMD_PAUSE = -1;
     q32DSP(!cpu_id)->PMU_CON0 &= ~BIT(0);
     __asm_csync();
@@ -654,6 +879,9 @@ void exception_analyze(int *sp)
     OS_ENTER_CRITICAL(); //禁止操作系统
 #endif
     EXCEPTION_PRINTF("\r\n\r\n---------------------exception error ------------------------\r\n\r\n");
+#ifdef CONFIG_EXCEPTION_SAVED_CONTEXT
+    EXCEPTION_PRINTF("exception capture v2: owner CPU%u, SRAM polling UART", cpu_id);
+#endif
     EXCEPTION_PRINTF("CPU%d %s, EMU_MSG = 0x%x", cpu_id, __func__, q32DSP(cpu_id)->EMU_MSG);
     EXCEPTION_PRINTF("CPU%d run addr = 0x%x", !cpu_id, q32DSP(!cpu_id)->PCRS);
 
@@ -665,6 +893,15 @@ void exception_analyze(int *sp)
     EXCEPTION_PRINTF("JL_WEMU->MSG0:0x%x, MSG1:0x%x, MSG2:0x%x, ID:0x%x, 0x%x, 0x%x, 0x%x", JL_WEMU->MSG0, JL_WEMU->MSG1, JL_WEMU->MSG2, JL_WEMU->LOG0, JL_WEMU->LOG1, JL_WEMU->LOG2, JL_WEMU->LOG3);
 
     trace_call_stack();
+
+#ifdef CONFIG_EXCEPTION_SAVED_CONTEXT
+    for (int c = 0; c < CPU_CORE_NUM; c++) {
+        exception_dump_saved_context(c);
+    }
+    for (int c = 0; c < CPU_CORE_NUM; c++) {
+        exception_dump_saved_memory(c);
+    }
+#endif
 
     unsigned int reti = sp[16];
     unsigned int rete = sp[17];
@@ -715,9 +952,11 @@ void exception_analyze(int *sp)
             EXCEPTION_PRINTF("[0-CPU] cpu%d emu err msg : %s", cpu_id, emu_msg[i]);
 
             if (i == 3) {
+#if !EXPCPTION_IN_SRAM
                 if (os_current_task_rom()) {
                     EXCEPTION_PRINTF("current_task : %s", os_current_task_rom());
                 }
+#endif
                 EXCEPTION_PRINTF("usp limit %x %x, ssp limit %x %x",
                                  q32DSP(cpu_id)->EMU_USP_L, q32DSP(cpu_id)->EMU_USP_H, q32DSP(cpu_id)->EMU_SSP_L, q32DSP(cpu_id)->EMU_SSP_H);
                 EXCEPTION_PRINTF("if you enable LV_USE_FREETYPE, you need to call sp_ovf_unen() at app_main() to disable sp over check");
@@ -730,7 +969,7 @@ void exception_analyze(int *sp)
                 EXCEPTION_PRINTF("ETM limit exception datl:0x%x, dath:0x%x, addrl:0x%x, addrh:0x%x",
                                  q32DSP(cpu_id)->WP0_DATL, q32DSP(cpu_id)->WP0_DATH, q32DSP(cpu_id)->WP0_ADRL, q32DSP(cpu_id)->WP0_ADRH);
             } else if (i == 29) {
-                DcuEmuMessage();
+                exception_dump_dcache();
                 EXCEPTION_PRINTF("except at dev : %s %s", get_debug_dev_name(JL_L1P->EMU_ID & 0xff), (JL_L1P->EMU_ID & BIT(31)) ? "not safe" : "safe");
             } else if (i == 30) {
                 for (int j = 0; j < ARRAY_SIZE(icache_emu_msg); ++j) {
@@ -749,7 +988,7 @@ void exception_analyze(int *sp)
                     if (JL_CEMU->MSG0 & BIT(j)) {
                         EXCEPTION_PRINTF("[1-HCORE] emu err msg : %s", hcore_emu_msg0[j]);
                         if (j == 14) {
-                            DcuEmuMessage();
+                            exception_dump_dcache();
                             EXCEPTION_PRINTF("except at dev : %s %s", get_debug_dev_name(JL_L1P->EMU_ID & 0xff), (JL_L1P->EMU_ID & BIT(31)) ? "not safe" : "safe");
                         }
                         if (j < 8 || j == 13 || j == 19) {
@@ -855,7 +1094,9 @@ void exception_analyze(int *sp)
 #endif
 
     EXCEPTION_PRINTF("system_reset...\r\n\r\n\r\n");
+#if !EXPCPTION_IN_SRAM
     log_flush();    //只能在异常中断里调用
+#endif
     __wdt_clear();
 #if (defined TCFG_DEBUG_DLOG_ENABLE && TCFG_DEBUG_DLOG_ENABLE == 1)
     dlog_exception_log_to_flash();

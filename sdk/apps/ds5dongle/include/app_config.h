@@ -10,6 +10,7 @@
 // #define CONFIG_RTOS_STACK_CHECK_ENABLE       //是否启用定时检查任务栈
 // #define CONFIG_MEM_LEAK_CHECK_ENABLE         //是否启用内存泄漏检查(需要包含mem_leak_test.h头文件)
 #define CONFIG_DEBUG_ENABLE                     //打印开关
+#define CONFIG_EXCEPTION_SAVED_CONTEXT          //保留双核进入异常前的寄存器现场
 // #define CONFIG_RELEASE_ENABLE
 #define CONFIG_CXX_SUPPORT                      //使能C++支持
 // #define CONFIG_LZ4_COMPRESS_APP_CODE_ENABLE     //使用LZ4压缩代码
@@ -286,7 +287,7 @@
 #define CONFIG_DEBUG_LIB(x)         (x & LIB_DEBUG)
 
 /* 临时排查 HID Control pending：打开 btctrler 的 [LMP] 日志，便于和 AC701N 的日志逐行对比。定位完删除。 */
-#define DS5_DEBUG_LMP
+// #define DS5_DEBUG_LMP
 
 
 #endif ///< APP_CONFIG_H

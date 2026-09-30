@@ -15,13 +15,13 @@
 
 static void custom_hid_rx_handler(const usb_dev usb_id, void *priv, u8 *buf, u32 len)
 {
-    printf("%s,%d,\n", __func__, __LINE__);
     log_debug("custom_hid_rx_handler >");
     log_debug_hexdump(buf,len);
 }
 
 static void custom_hid_get_report_handler(const usb_dev usb_id, void *priv, u8 *buf, u32 len) {
     log_debug("custom_hid_get_report_handler >");
+    log_debug_hexdump(buf,len);
 }
 
 static void custom_hid_set_report_handler(const usb_dev usb_id, void *priv, u8 *buf, u32 len) {
