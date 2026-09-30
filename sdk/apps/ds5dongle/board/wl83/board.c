@@ -21,6 +21,36 @@ const struct wifi_calibration_param wifi_calibration_param = {
         72, 90, 80, 64, 64, 64, 50, 43,
     },
 };
+
+/*const struct wifi_calibration_param wifi_calibration_param = {
+    .xosc_l     = 0xb,// 调节左晶振电容
+    .xosc_r     = 0xb,// 调节右晶振电容
+    .pa_trim_data = {1, 7, 4, 7, 11, 1, 7},// 根据MP测试生成PA TRIM值
+    .mcs_dgain    = {
+        50,//11B_1M
+        50,//11B_2.2M
+        50,//11B_5.5M
+        50,//11B_11M
+
+        72,//11G_6M
+        72,//11G_9M
+        85,//11G_12M
+        80,//11G_18M
+        64,//11G_24M
+        64,//11G_36M
+        62,//11G_48M
+        52,//11G_54M
+
+        72,//11N_MCS0
+        90,//11N_MCS1
+        80,//11N_MCS2
+        64,//11N_MCS3
+        64,//11N_MCS4
+        64,//11N_MCS5
+        50,//11N_MCS6
+        43,//11N_MCS7
+    }
+};*/
 #endif
 
 #if TCFG_UART0_ENABLE
