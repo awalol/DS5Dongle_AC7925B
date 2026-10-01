@@ -27,6 +27,7 @@ const struct task_info task_info_table[] = {
     {"btencry",             14,     512,      128 },
     {"btctrler",            19,     512,      384 },
     {"btstack",             18,     768,      384 },
+    {"hid_report",          10,     512,        0 },
 
     {0, 0, 0, 0, 0},
 };

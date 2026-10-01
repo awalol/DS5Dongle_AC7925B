@@ -246,6 +246,9 @@ c_SRC_FILES := \
 	../../../../apps/ds5dongle/common/queue.c \
 	../../../../apps/ds5dongle/common/crc.c \
 	../../../../apps/ds5dongle/common/ds5_bt.c \
+	../../../../apps/ds5dongle/common/ds5_hci.c \
+	../../../../apps/ds5dongle/common/ds5_usb.c \
+	../../../../apps/ds5dongle/common/ds5_report.c \
 	../../../../apps/ds5dongle/bt.c \
 	../../../../apps/ds5dongle/common/uart_cmd.c \
 	../../../../apps/ds5dongle/ibtstack.c \
@@ -280,6 +283,12 @@ cc_SRC_FILES :=
 # 需要编译的 .cxx 文件
 cxx_SRC_FILES :=
 
+
+# LTO 会在 GNU ld --wrap 重定向之前解析库函数调用。
+# 因此生成当前目标专用的静态库，仅重命名其中的原始 ACL 入口。
+DS5_BTCTRL_LIB := $(BUILD_DIR)/btctrler_ds5.a
+DS5_HCI_PREPARE := $(ROOT_PREFIX)/apps/ds5dongle/tools/prepare_hci_archive.py
+PYTHON ?= python3
 
 # 链接参数
 LFLAGS := \
@@ -317,7 +326,7 @@ LFLAGS := \
 	../../../../cpu/wl83/liba/fs.a \
 	../../../../cpu/wl83/liba/common_lib.a \
 	../../../../cpu/wl83/liba/wl_rf_common.a \
-	../../../../cpu/wl83/liba/btctrler.a \
+	$(DS5_BTCTRL_LIB) \
 	../../../../cpu/wl83/liba/btstack.a \
 	../../../../cpu/wl83/liba/crypto_toolbox_Osize.a \
 	../../../../cpu/wl83/liba/lib_ccm_aes.a \
@@ -365,11 +374,11 @@ LINK_AT ?= 1
 
 # 表示下面的不是一个文件的名字，无论是否存在 all, clean, pre_build 这样的文件
 # 还是要执行命令
-# see: https://www.gnu.org/software/make/manual/html_node/Phony-Targets.html
+# 参见：https://www.gnu.org/software/make/manual/html_node/Phony-Targets.html
 .PHONY: all clean pre_build force_build_stamp
 
 # 不要使用 make 预设置的规则
-# see: https://www.gnu.org/software/make/manual/html_node/Suffix-Rules.html
+# 参见：https://www.gnu.org/software/make/manual/html_node/Suffix-Rules.html
 .SUFFIXES:
 
 all: pre_build $(OUT_ELF)
@@ -379,7 +388,7 @@ ifneq ($(OS), Windows_NT)
 endif
 	$(QUITE) $(RUN_POST_SCRIPT) sdk
 
-# app_main prints __DATE__/__TIME__; refresh it even on incremental builds.
+# app_main 会打印 __DATE__/__TIME__，增量构建时也需要刷新编译日期和时间。
 $(BUILD_DIR)/apps/ds5dongle/app_main.c.o: force_build_stamp
 
 force_build_stamp:
@@ -399,6 +408,12 @@ clean:
 	$(QUITE) $(RM) $(BUILD_DIR)
 
 
+
+$(DS5_BTCTRL_LIB): $(ROOT_PREFIX)/cpu/wl83/liba/btctrler.a $(ROOT_PREFIX)/cpu/wl83/liba/btstack.a $(DS5_HCI_PREPARE)
+	$(info +HCI-ARCHIVE $@)
+	$(QUITE) $(PYTHON) $(DS5_HCI_PREPARE) --cc "$(CC)" --ar "$(AR)" --controller "$<" --stack "$(ROOT_PREFIX)/cpu/wl83/liba/btstack.a" --output "$@"
+
+$(OUT_ELF): $(DS5_BTCTRL_LIB)
 
 ifeq ($(LINK_AT), 1)
 $(OUT_ELF): $(OBJS)

@@ -4,6 +4,7 @@
 #include "app_config.h"
 #include "usb/device/usb_stack.h"
 #include "usb/device/custom_hid.h"
+#include "ds5_usb.h"
 
 #define LOG_TAG             "[DS5_USB]"
 #define LOG_ERROR_ENABLE
@@ -46,6 +47,8 @@ void usb_start(const usb_dev usbfd, u32 class)
     custom_hid_set_rx_hook(usbfd, NULL, custom_hid_rx_handler);
     custom_hid_set_get_report_hook(usbfd, NULL, custom_hid_get_report_handler);
     custom_hid_set_set_report_hook(usbfd, NULL, custom_hid_set_report_handler);
+
+    ds5_usb_init();
 }
 
 void usb_init() {

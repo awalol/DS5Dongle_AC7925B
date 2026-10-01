@@ -1,5 +1,5 @@
 //
-// Created by awalol on 2026/9/29.
+// 由 awalol 创建于 2026/9/29。
 //
 
 #define LOG_TAG             "[DS5_BT]"
@@ -14,28 +14,23 @@
 #include "bt.h"
 #include "ibtstack.h"
 #include "timer.h"
+#include "ds5_report.h"
 
-struct report
+
+void ds5_hid_input_report(const u8* packet, u16 size)
 {
-    u8 data[63];
-    u8 size;
-};
-// 0: 0x05 1:0x09 2:0x20 3:0x22
-static struct report feature_repot[4];
+    (void)packet;
+    (void)size;
 
-
-void ds5_hid_input_report(const u8 *packet, u16 size) {
-    (void) packet;
-    (void) size;
-
-    static u32 start_ms;
+    /*static u32 start_ms;
     static u32 packets;
     static bool initialized;
     const u32 log_interval_ms = 1000; // 输出间隔，单位 ms
     u32 now_ms = sys_timer_get_ms();
 
 
-    if (!initialized) {
+    if (!initialized)
+    {
         initialized = true;
         start_ms = now_ms;
         return; // 首包作为统计窗口起点
@@ -43,7 +38,8 @@ void ds5_hid_input_report(const u8 *packet, u16 size) {
 
     packets++;
     u32 elapsed_ms = now_ms - start_ms;
-    if (elapsed_ms >= log_interval_ms) {
+    if (elapsed_ms >= log_interval_ms)
+    {
         u32 rate_x10 = (u32)((u64)packets * 10000U / elapsed_ms);
         log_info("HID Interrupt RX: packets=%u, interval=%u ms, rate=%u.%u Hz",
                  (unsigned int)packets, (unsigned int)elapsed_ms,
@@ -53,20 +49,25 @@ void ds5_hid_input_report(const u8 *packet, u16 size) {
 
         start_ms = now_ms;
         packets = 0;
+    }*/
+
+    ds5_report_state_update(packet + 3,63);
+}
+
+void ds5_hid_control_data(const u8* packet, u16 size)
+{
+    /* 在 btstack 任务中执行：接收 ACL 数据期间避免通过串口完整打印数据包。 */
+
+    if (size <= 2) {
+        return;
     }
 
-
+    /* packet[1] 为 report id，具体缓存由 ds5_report.c 统一管理 */
+    ds5_report_feature_update(packet[1], (u8 *)(packet + 2), size - 2);
 }
 
-void ds5_hid_control_data(const u8 *packet, u16 size) {
-    (void) packet;
-    (void) size;
-
-    log_debug("Receive Control Data >>");
-    log_debug_hexdump(packet,size);
-}
-
-void ds5_on_connected(void) {
+void ds5_on_connected(void)
+{
     bt_hid_control_get(0x05);
     bt_hid_control_get(0x09);
     bt_hid_control_get(0x20);
