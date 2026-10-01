@@ -4,15 +4,25 @@
 
 #include "asm/cpu.h"
 #include "ds5_report.h"
+#include "spinlock.h"
+
+#include "bt.h"
 
 struct report
 {
+    u8 id;
     u8 data[63];
     u8 size;
 };
 
-// 0: 0x05 1:0x09 2:0x20 3:0x22
-static struct report feature_report[4];
+static struct report feature_report[] = {
+    {.id = 0x05},
+    {.id = 0x09},
+    {.id = 0x20},
+    {.id = 0x22}
+};
+
+static DEFINE_SPINLOCK(feature_report_lock);
 static USBGetStateData state;
 static const uint8_t state_init_data[63] = {
     0x7f, 0x7d, 0x7f, 0x7e, 0x00, 0x00, 0xa7,
@@ -24,60 +34,43 @@ static const uint8_t state_init_data[63] = {
     0x00, 0xa7, 0xad, 0x60, 0x00, 0x29, 0x18, 0x00,
     0x53, 0x9f, 0x28, 0x35, 0xa5, 0xa8, 0x0c, 0x8b
 };
+u8 reportSeqCounter = 0;
+u8 packetCounter = 0;
 
 void ds5_report_feature_update(u8 report_id, const u8* data, u8 size)
 {
-    struct report* report;
-
-    switch (report_id)
+    for (int i = 0;i < sizeof(feature_report) / sizeof(struct report);i++)
     {
-    case 0x05:
-        report = &feature_report[0];
+        struct report *report = &feature_report[i];
+        if (report->id != report_id)
+        {
+            continue;
+        }
+        u8 len = MIN(size, sizeof(report->data));
+        spin_lock(&feature_report_lock);
+        memcpy(report->data, data, len);
+        report->size = len;
+        spin_unlock(&feature_report_lock);
         break;
-    case 0x09:
-        report = &feature_report[1];
-        break;
-    case 0x20:
-        report = &feature_report[2];
-        break;
-    case 0x22:
-        report = &feature_report[3];
-        break;
-    default:
-        return;
     }
-
-    u8 len = MIN(size, sizeof(report->data));
-    memcpy(report->data, data, len);
-    report->size = len;
 }
 
 u8 ds5_report_feature_copy(u8 report_id, u8* dst, u8 size)
 {
-    struct report* report;
-
-    switch (report_id)
+    for (int i = 0;i < sizeof(feature_report) / sizeof(struct report);i++)
     {
-    case 0x05:
-        report = &feature_report[0];
-        break;
-    case 0x09:
-        report = &feature_report[1];
-        break;
-    case 0x20:
-        report = &feature_report[2];
-        break;
-    case 0x22:
-        report = &feature_report[3];
-        break;
-    default:
-        return 0;
+        struct report *report = &feature_report[i];
+        if (report->id != report_id)
+        {
+            continue;
+        }
+        spin_lock(&feature_report_lock);
+        u8 len = MIN(size, report->size);
+        memcpy(dst, report->data, len);
+        spin_unlock(&feature_report_lock);
+        return len;
     }
-
-    u8 len = MIN(size, report->size);
-    memcpy(dst, report->data, len);
-
-    return len;
+    return 0;
 }
 
 void ds5_report_state_update(const u8* data, const u8 len)
@@ -96,4 +89,15 @@ u8 ds5_report_state_copy(u8* dst, u8 len)
 void ds5_report_state_reset()
 {
     memcpy(&state, state_init_data, sizeof(state_init_data));
+}
+
+void ds5_report_send_state(const SetStateData* state)
+{
+    u8 packet[78] = {0};
+    packet[0] = 0x31;
+    packet[1] = reportSeqCounter << 4;
+    reportSeqCounter = (reportSeqCounter + 1) & 0x0F;
+    packet[2] = 0x10;
+    memcpy(packet + 3,state,sizeof(SetStateData));
+    bt_hid_interrupt_send(packet,sizeof(packet));
 }

@@ -280,5 +280,6 @@ u8 ds5_report_feature_copy(u8 report_id, u8* dst, u8 size);
 void ds5_report_state_update(const u8* data, u8 len);
 u8 ds5_report_state_copy(u8* dst, u8 len);
 void ds5_report_state_reset();
+void ds5_report_send_state(const SetStateData* state);
 
 #endif //SDK_DS5_REPORT_H

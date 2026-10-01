@@ -21,7 +21,7 @@
 #define LOG_ERROR_ENABLE
 #define LOG_WARN_ENABLE
 #define LOG_INFO_ENABLE
-#define LOG_DEBUG_ENABLE
+#define LOG_DEBUG_DISABLE
 #include "crc.h"
 #include "debug.h"
 #include "ds5_bt.h"

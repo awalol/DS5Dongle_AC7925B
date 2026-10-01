@@ -10,7 +10,7 @@
 #define LOG_ERROR_ENABLE
 #define LOG_WARN_ENABLE
 #define LOG_INFO_ENABLE
-#define LOG_DEBUG_ENABLE
+#define LOG_DEBUG_DISABLE
 #include "debug.h"
 
 
@@ -23,10 +23,10 @@ static void custom_hid_rx_handler(const usb_dev usb_id, void *priv, u8 *buf, u32
 }
 
 static void custom_hid_get_report_handler(const usb_dev usb_id, void *priv, u8 *buf, u32 len) {
-    ds5_usb_get_report(buf, len);
-
     log_debug("custom_hid_get_report_handler reply >");
     log_debug_hexdump(buf,len);
+
+    ds5_usb_get_report(buf, len);
 }
 
 static void custom_hid_set_report_handler(const usb_dev usb_id, void *priv, u8 *buf, u32 len) {

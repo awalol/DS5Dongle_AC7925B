@@ -270,6 +270,16 @@ LOG_TAG_CONST_DECLARE(LOG_CHAR,     LOG_TAG_CONST);
 
 #endif
 
+/* Define LOG_DEBUG_DISABLE before including debug.h to silence debug output.
+ * This overrides both log modes and LOG_DEBUG_ENABLE; other levels are unchanged.
+ */
+#ifdef LOG_DEBUG_DISABLE
+#undef log_debug
+#undef log_debug_hexdump
+#define log_debug(...)              do {} while (0)
+#define log_debug_hexdump(x, y)      do {} while (0)
+#endif
+
 
 #define traceSUPER_MODE() \
 

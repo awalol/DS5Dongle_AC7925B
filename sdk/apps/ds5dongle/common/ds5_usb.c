@@ -49,6 +49,16 @@ void ds5_usb_set_report(u8* buf, u32 len)
 
 void ds5_usb_interrupt(u8* buf, u32 len)
 {
+    switch (buf[0])
+    {
+    case 0x02:
+        {
+            SetStateData state;
+            memcpy(&state,buf + 1,len - 1);
+            ds5_report_send_state(&state);
+            break;
+        }
+    }
 }
 
 void ds5_usb_init()
