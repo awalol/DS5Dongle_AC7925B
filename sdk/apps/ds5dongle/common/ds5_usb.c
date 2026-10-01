@@ -33,8 +33,22 @@ static void ds5_hid_report_task(void* priv)
         if (len != sizeof(state_data))
         {
             os_time_dly(1); // 失败后退让，避免连续重试
+            log_error("HID report data size mismatch: %d", len);
         }
     }
+}
+
+void ds5_usb_get_report(u8* buf, u32 len)
+{
+    ds5_report_feature_copy(buf[0],buf + 1,len - 1);
+}
+
+void ds5_usb_set_report(u8* buf, u32 len)
+{
+}
+
+void ds5_usb_interrupt(u8* buf, u32 len)
+{
 }
 
 void ds5_usb_init()

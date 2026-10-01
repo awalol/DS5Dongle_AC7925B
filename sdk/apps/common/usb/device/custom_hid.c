@@ -429,8 +429,10 @@ static u32 custom_hid_itf_hander(struct usb_device_t *usb_device, struct usb_ctr
             custom_hid_info[usb_id]->cfg_done = 1;
             break;
         case USB_REQ_GET_REPORT:
-            if (custom_hid_info && custom_hid_info[usb_id]->get_report_hook) {
+            if (custom_hid_info[usb_id]->get_report_hook) {
                 tx_len = req->wLength;
+                memset(tx_payload, 0, tx_len);
+                tx_payload[0] = LOBYTE(req->wValue);
                 custom_hid_info[usb_id]->get_report_hook(usb_id,
                     custom_hid_info[usb_id]->get_report_priv,
                                                 tx_payload,
@@ -442,7 +444,7 @@ static u32 custom_hid_itf_hander(struct usb_device_t *usb_device, struct usb_ctr
             }
             break;
         case USB_REQ_SET_REPORT:
-            if (custom_hid_info && custom_hid_info[usb_id]->set_report_hook) {
+            if (custom_hid_info[usb_id]->set_report_hook) {
                 usb_set_setup_recv(usb_device, custom_hid_recv_output_report);
             } else {
                 log_error("custom hid SET_REPORT haven't Hook. STALL");

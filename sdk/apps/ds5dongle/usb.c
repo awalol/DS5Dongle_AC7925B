@@ -18,16 +18,22 @@ static void custom_hid_rx_handler(const usb_dev usb_id, void *priv, u8 *buf, u32
 {
     log_debug("custom_hid_rx_handler >");
     log_debug_hexdump(buf,len);
+
+    ds5_usb_interrupt(buf, len);
 }
 
 static void custom_hid_get_report_handler(const usb_dev usb_id, void *priv, u8 *buf, u32 len) {
-    log_debug("custom_hid_get_report_handler >");
+    ds5_usb_get_report(buf, len);
+
+    log_debug("custom_hid_get_report_handler reply >");
     log_debug_hexdump(buf,len);
 }
 
 static void custom_hid_set_report_handler(const usb_dev usb_id, void *priv, u8 *buf, u32 len) {
     log_debug("custom_hid_set_report_handler >");
     log_debug_hexdump(buf,len);
+
+    ds5_usb_set_report(buf, len);
 }
 
 /**
