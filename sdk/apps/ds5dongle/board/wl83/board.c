@@ -1,4 +1,5 @@
 #include "app_config.h"
+#include "gpio.h"
 #include "system/includes.h"
 #include "device/includes.h"
 #include "device/uart.h"
@@ -597,6 +598,16 @@ void board_early_init(void)
     devices_init();
 }
 
+static void status_led_init(void)
+{
+    gpio_set_pull_up(TCFG_STATUS_LED_IO, 0);                    // 0=关闭上拉（写 1 反而是开 10K 上拉）
+    gpio_set_pull_down(TCFG_STATUS_LED_IO, 0);                  // 关闭内部下拉
+    gpio_set_die(TCFG_STATUS_LED_IO, 1);                        // 数字 IO 使能，输出必须开
+    gpio_direction_output(TCFG_STATUS_LED_IO, TCFG_STATUS_LED_ACTIVE_LEVEL); // 方向+电平一次搞定
+    // 若直接驱动 LED 偏暗，再加驱动能力：gpio_set_hd(TCFG_STATUS_LED_IO, GPIO_DRIVE_STRENGTH_8p0mA);
+    gpio_set_hd(TCFG_STATUS_LED_IO, GPIO_DRIVE_STRENGTH_24p0mA);
+}
+
 void board_init(void)
 {
 #if TCFG_ADKEY_ENABLE || TCFG_RTC_ENABLE
@@ -609,5 +620,9 @@ void board_init(void)
 
 #if (TCFG_IOKEY_ENABLE || TCFG_ADKEY_ENABLE)
     key_driver_init();
+#endif
+
+#ifdef TCFG_STATUS_LED_IO
+    status_led_init();
 #endif
 }
