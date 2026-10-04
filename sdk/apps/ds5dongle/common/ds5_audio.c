@@ -14,6 +14,7 @@
 #include "queue.h"
 #include "task.h"
 #include "wdl_bridge.h"
+#include "asm/src.h"
 #include "opus.h"
 
 #define UAC_CBUF_SIZE (1 * 1024)
@@ -23,11 +24,18 @@
 #define HAPTICS_BUF_SIZE 64
 #define HAPTICS_CHANNELS 2
 
-#define HAPTICS_OUTPUT_FRAMES 4
 #define HAPTICS_QUEUE_DEPTH 2
 #define HAPTICS_GAIN 1.0f
 
-static wdl_resampler_t* haptics_resampler;
+/* 杰理 SRC 驱动引用的全局配置：完整 SDK 由 sdk/audio/log_config/lib_media_config.c
+   提供，本工程没有编译该文件。数值是驱动内部输入缓冲的每通道帧数。*/
+const int config_resample_pcm_frame_buffer = 256;
+
+static void* haptics_src;
+static s16 haptics_src_stage[UAC_INPUT_FRAMES * HAPTICS_CHANNELS];
+static s8 haptics_buf[HAPTICS_BUF_SIZE];
+static u8 haptics_buf_pos;
+static u32 haptics_src_out_cnt;
 static wdl_resampler_t* spk_resampler;
 static OpusEncoder *opus_enc;
 static cbuffer_t uac_cbuf;
@@ -55,77 +63,81 @@ void ds5_audio_rx(u8* data, u32 size)
     }
 }
 
+/* 硬件 SRC 的输出回调：在调用 src_base_write / src_base_push_data_out 的任务
+   上下文里被同步调用，必须返回本次消费的全部字节数。*/
+static int haptics_src_output(void* priv, void* data, int len)
+{
+    s16* pcm = (s16*)data;
+    int samples = len / sizeof(s16); // 交织的 2 声道
+
+    if (haptics_src_out_cnt < 4)
+    {
+        haptics_src_out_cnt++;
+        log_info("haptics src out: %d bytes", len);
+    }
+
+    for (int i = 0; i < samples; i++)
+    {
+        float sample = pcm[i] * (127.0f * HAPTICS_GAIN / 32768.0f);
+        int v = (int)sample;
+        if (v > 127)
+        {
+            v = 127;
+        }
+        else if (v < -128)
+        {
+            v = -128;
+        }
+
+        haptics_buf[haptics_buf_pos++] = (s8)v;
+
+        if (haptics_buf_pos == HAPTICS_BUF_SIZE)
+        {
+            haptics_buf_pos = 0;
+            ds5_report_send_haptics(haptics_buf);
+        }
+    }
+
+    return len;
+}
+
 static void ds5_audio_task(void* priv)
 {
     s16 buffer[UAC_INPUT_FRAMES * UAC_CHANNELS];
-    float haptics_resample_buf[HAPTICS_OUTPUT_FRAMES * HAPTICS_CHANNELS];
-    s8 haptics_buf[HAPTICS_BUF_SIZE];
-    u8 haptics_buf_pos = 0;
 
     while (1)
     {
         os_sem_set(&uac_sem, 0);
         u32 frames = cbuf_get_data_len(&uac_cbuf) / UAC_FRAME_BYTES;
-        if (!frames)
+        if (frames < UAC_INPUT_FRAMES)
         {
             os_sem_pend(&uac_sem, 0);
             continue;
         }
-        if (frames > UAC_INPUT_FRAMES)
-        {
-            frames = UAC_INPUT_FRAMES;
-        }
 
-        float* in_buf = NULL;
-        // nframes keep 48
-        int nframes = wdl_resampler_prepare(haptics_resampler, frames, &in_buf);
-        if (nframes <= 0 || !in_buf)
-        {
-            log_error("haptics resampler prepare failed\n");
-            os_time_dly(1);
-            continue;
-        }
-        nframes = cbuf_read(&uac_cbuf, buffer, nframes * UAC_FRAME_BYTES) / UAC_FRAME_BYTES;
-        if (!nframes)
+        int got = cbuf_read(&uac_cbuf, buffer, UAC_INPUT_FRAMES * UAC_FRAME_BYTES) / UAC_FRAME_BYTES;
+        if (got != UAC_INPUT_FRAMES)
         {
             continue;
         }
 
-        // split channel
-        for (int i = 0; i < nframes; i++)
+        // 取出第 3、4 声道（haptics），整理成连续的 2 声道数据
+        for (int i = 0; i < UAC_INPUT_FRAMES; i++)
         {
-            in_buf[i * 2] = buffer[i * UAC_CHANNELS + 2] / 32768.0f;
-            in_buf[i * 2 + 1] = buffer[i * UAC_CHANNELS + 3] / 32768.0f;
+            haptics_src_stage[i * 2] = buffer[i * UAC_CHANNELS + 2];
+            haptics_src_stage[i * 2 + 1] = buffer[i * UAC_CHANNELS + 3];
         }
 
-        // haptics proc
-        int out_frames = wdl_resampler_out(haptics_resampler, haptics_resample_buf, nframes,
-                                           HAPTICS_OUTPUT_FRAMES);
-        for (int i = 0; i < out_frames * HAPTICS_CHANNELS; i++)
+        // 48kHz -> 3kHz，杰理硬件 SRC；转换结果在 haptics_src_output 回调里给出
+        int wlen = src_base_write(haptics_src, haptics_src_stage, sizeof(haptics_src_stage));
+        if (wlen != (int)sizeof(haptics_src_stage))
         {
-            float sample = haptics_resample_buf[i] * 127.0f * HAPTICS_GAIN;
-            // clamp
-            if (sample > 127.0f)
-            {
-                sample = 127.0f;
-            }
-            else if (sample < -128.0f)
-            {
-                sample = -128.0f;
-            }
-
-            haptics_buf[haptics_buf_pos++] = (s8)sample;
-
-            if (haptics_buf_pos == HAPTICS_BUF_SIZE)
-            {
-                /*if (!queue_push(&haptics_queue, haptics_buf))
-                {
-                    queue_pop(&haptics_queue, NULL);
-                    queue_push(&haptics_queue, haptics_buf);
-                }*/
-                haptics_buf_pos = 0;
-                ds5_report_send_haptics(haptics_buf);
-            }
+            log_error("haptics src write: %d/%d", wlen, (int)sizeof(haptics_src_stage));
+        }
+        int pret = src_base_push_data_out(haptics_src);
+        if (pret)
+        {
+            log_error("haptics src push: %d", pret);
         }
     }
 }
@@ -136,15 +148,21 @@ void ds5_audio_init(void)
     {
         return;
     }
-    //TODO: 以后换成杰理的 SRC
-    haptics_resampler = wdl_resampler_create(48000, 3000, HAPTICS_CHANNELS,
-                                            UAC_INPUT_FRAMES, HAPTICS_OUTPUT_FRAMES);
-    spk_resampler = wdl_resampler_create(51200, 48000, HAPTICS_CHANNELS,
-                                        UAC_INPUT_FRAMES, HAPTICS_OUTPUT_FRAMES);
-    if (!haptics_resampler || spk_resampler)
+    /* haptics: 48kHz -> 3kHz，换成杰理硬件 SRC（src_v2）。*/
+    haptics_src = src_base_open(HAPTICS_CHANNELS, 48000, 3000, AUDIO_ONLY_RESAMPLE);
+    if (!haptics_src)
     {
-        log_error("haptics resampler init failed");
+        log_error("haptics hw src open failed");
     }
+    else
+    {
+        src_base_set_output_handler(haptics_src, NULL, haptics_src_output);
+        log_info("haptics hw src opened");
+    }
+
+    /* SPK: 51200 -> 48000，暂未接入处理链路，保留原来的 WDL 实例。*/
+    spk_resampler = wdl_resampler_create(51200, 48000, HAPTICS_CHANNELS,
+                                        UAC_INPUT_FRAMES, UAC_INPUT_FRAMES);
 
     /*
     int opus_err = 0;
@@ -179,13 +197,16 @@ void ds5_audio_init(void)
         log_error("audio task create failed: %d", task_err);
     }
 
-    if (!haptics_resampler || !spk_resampler || !queue_created || sem_err || task_err) // || opus_err
+    if (!haptics_src || !spk_resampler || !queue_created || sem_err || task_err) // || opus_err
     {
         os_sem_del(&uac_sem, OS_DEL_ALWAYS);
         free(haptics_queue.data);
         haptics_queue.data = NULL;
-        wdl_resampler_destroy(haptics_resampler);
-        haptics_resampler = NULL;
+        if (haptics_src)
+        {
+            src_base_close(haptics_src);
+            haptics_src = NULL;
+        }
         opus_enc = NULL;
         return;
     }

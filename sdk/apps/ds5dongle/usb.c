@@ -61,10 +61,11 @@ void usb_start(const usb_dev usbfd, u32 class)
     if (class == 0) {
         class = USB_DEVICE_CLASS_CONFIG_2_0;
     }
-    usb_device_mode(usbfd, class);
+
     custom_hid_set_rx_hook(usbfd, NULL, custom_hid_rx_handler);
     custom_hid_set_get_report_hook(usbfd, NULL, custom_hid_get_report_handler);
     custom_hid_set_set_report_hook(usbfd, NULL, custom_hid_set_report_handler);
+    usb_device_mode(usbfd, class);
 
     ds5_usb_init();
     ds5_audio_init();
