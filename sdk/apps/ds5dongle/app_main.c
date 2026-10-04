@@ -2,9 +2,11 @@
 #include "system/includes.h"
 #include "app_core.h"
 #include "bt.h"
+#include "device_event.h"
 #include "uart_cmd.h"
 #include "event/key_event.h"
 #include "asm/power_interface.h"
+#include "usb.h"
 
 /*中断列表 */
 const struct irq_info irq_info_table[] = {
@@ -28,6 +30,7 @@ const struct task_info task_info_table[] = {
     {"btctrler",            19,     512,      384 },
     {"btstack",             18,     768,      384 },
     {"hid_report",          10,     512,        0 },
+    {"audio",               10,     1024,        0 },
 
     {0, 0, 0, 0, 0},
 };
@@ -97,6 +100,9 @@ void app_default_event_handler(struct sys_event *event)
     case SYS_TOUCH_EVENT:
         break;
     case SYS_DEVICE_EVENT:
+        if (event->from == DEVICE_EVENT_FROM_UAC) {
+            usb_audio_event_handler((struct device_event *)event->payload);
+        }
         break;
     case SYS_NET_EVENT:
         break;

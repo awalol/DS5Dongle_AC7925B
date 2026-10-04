@@ -13,9 +13,11 @@
 //*********************************************************************************//
 #define TCFG_OSC_FREQUENCY                  24000000
 #define TCFG_SYS_CLK                        192000000         //240M,192M,160M,120M,96M,80M,64M,60M,48M,40M,32M,24M，其他值时启用SYS_PLL
+// #define TCFG_SYS_CLK                        320000000         //360M,320M,240M,192M,160M,120M,96M,80M,64M,60M,48M,40M,32M,24M，其他值时启用SYS_PLL(最高支持360M)
 #define TCFG_LSB_CLK                        48000000          //96M,80M,60M,48M,40M,24M,20M,12M
 #define TCFG_HSB_CLK_DIV                    2                 //HSB_CLK = SYS_CLK / HSB_CLK_DIV
 #define TCFG_SFCTZ_CLK                      48000000
+// #define TCFG_SFCTZ_CLK                      96000000          //SFC时钟，和加载代码的速度有关
 #define TCFG_SDRAM_CLK                      200000000         //SDRAM/DDR时钟
 
 

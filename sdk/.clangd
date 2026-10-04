@@ -1,5 +1,5 @@
 # Jieli's Clang 4 has a private "pi32v2" backend.  CLion's bundled clangd
-# does not know that target, so use adjusted i386 only as an ABI surrogate.
+# does not know that target, so use adjusted i386/OpenBSD as an ABI surrogate.
 # This does not change the compiler or target used by the Makefiles.
 CompileFlags:
   # Force GNU-style Clang option parsing rather than clang-cl parsing.
@@ -18,40 +18,50 @@ CompileFlags:
   Add:
     # PI32v2 is 32-bit little-endian and aligns i64/double to 4 bytes.
     # -mlong-double-64 corrects i386's remaining scalar ABI difference.
-    - --target=i386-unknown-elf
+    # OpenBSD's i386 target uses unsigned long for the builtin size_t and
+    # long for ptrdiff_t/intptr_t, just like PI32v2. Overriding __SIZE_TYPE__
+    # alone on i386-unknown-elf leaves the builtin unsigned int unchanged
+    # and makes the SDK's C++ operator new declarations invalid.
+    - --target=i386-unknown-openbsd
     - -march=i386
     - -mlong-double-64
 
-    # CLion's standalone clangd package has no bundled resource headers here;
-    # use the headers shipped with the actual Jieli compiler.
-    - -isystemC:/JL/pi32/lib/clang/4.0.1/include
+    # CLion runs clangd on macOS, even when orb-clang builds in Linux.
+    # Use the local Jieli headers; stddef.h/stdarg.h match the VM's PI32v2
+    # Clang 4.0.1 headers. /opt/jieli/pi32v2 has no lib/clang on this host.
+    - -isystem/opt/jieli/pi32/lib/clang/4.0.1/include
 
-    # The surrogate architecture must not select x86-specific SDK paths.
+    # The surrogate must not select x86/OpenBSD/Unix-specific SDK paths.
     - -Ui386
     - -U__i386
     - -U__i386__
     - -U__tune_i386__
     - -U__code_model_small__
+    - -U__OpenBSD__
+    - -Uunix
+    - -U__unix
+    - -U__unix__
 
     - -U__BIGGEST_ALIGNMENT__
     - -D__BIGGEST_ALIGNMENT__=4
 
-    # Match the PI32v2 predefined ABI types used by the bundled newlib.
-    - -U__SIZE_TYPE__
-    - "-D__SIZE_TYPE__=long unsigned int"
-    - -U__PTRDIFF_TYPE__
-    - "-D__PTRDIFF_TYPE__=long int"
-    - -U__INTPTR_TYPE__
-    - "-D__INTPTR_TYPE__=long int"
-    - -U__UINTPTR_TYPE__
-    - "-D__UINTPTR_TYPE__=long unsigned int"
-    - -U__SIZE_MAX__
-    - -D__SIZE_MAX__=4294967295UL
-    - -U__PTRDIFF_MAX__
-    - -D__PTRDIFF_MAX__=2147483647L
-    - -U__INTPTR_MAX__
-    - -D__INTPTR_MAX__=2147483647L
-    - -U__UINTPTR_MAX__
-    - -D__UINTPTR_MAX__=4294967295UL
     # Real PI32v2 builtin; project-specific CONFIG_* macros come from Make.
     - -D__PI32V2__=1
+
+Diagnostics:
+  # SDK register headers qualify unnamed reserved bit-fields with volatile.
+  # Jieli Clang 4 accepts this in C++; modern Clang rejects it (CWG 2229).
+  # Suppress only this compatibility diagnostic, preserving register qualifiers
+  # and all other diagnostics, including genuine narrowing conversions.
+  Suppress: [anon_bitfield_qualifiers]
+
+---
+# The SDK's dlog formatter uses C11 _Generic associations (including
+# "default:") inside log_error/log_info. Jieli Clang accepts that extension in
+# C++, but CLion's C++ analysis can treat "default" as an unresolved symbol.
+# Disable only the dlog-storage branch while clangd parses this C++ file; the
+# ulog log_print branch remains visible, and real Makefile builds are unaffected.
+If:
+  PathMatch: 'apps/ds5dongle/common/ds5_audio\.cpp'
+CompileFlags:
+  Add: [-DCONFIG_DLOG_BUILD_DISBALE]

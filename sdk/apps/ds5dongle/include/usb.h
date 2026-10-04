@@ -5,6 +5,6 @@
 #ifndef SDK_USB_H
 #define SDK_USB_H
 
-void usb_start(const usb_dev usbfd, u32 class);
+int usb_audio_event_handler(void *evt);
 
 #endif //SDK_USB_H

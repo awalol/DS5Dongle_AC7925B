@@ -15,6 +15,7 @@
 #include "ibtstack.h"
 #include "timer.h"
 #include "ds5_report.h"
+#include "usb/device/usb_stack.h"
 
 
 void ds5_hid_input_report(const u8* packet, u16 size)
@@ -64,7 +65,31 @@ void ds5_hid_control_data(const u8* packet, u16 size)
 
     /* packet[1] 为 report id，具体缓存由 ds5_report.c 统一管理 */
     ds5_report_feature_update(packet[1], (u8 *)(packet + 2), size - 2);
+
+    if (packet[1] == 0x20) {
+        if (packet[23] == 0x44) {
+            log_info("Connected DSE Controller\n");
+        } else {
+            printf("Connected DS5 Controller\n");
+        }
+        usb_start(1,0);
+    }
 }
+
+SetStateData state = {
+    .AllowAudioControl = 1,
+    .AllowLedColor = 1,
+    .MicSelect = 0,
+    .NoiseCancelEnable = 1,
+    .AllowLightBrightnessChange = 1,
+    .AllowColorLightFadeAnimation = 1,
+    .LightFadeAnimation = FadeOut,
+    .LightBrightness = Bright,
+    // RGB LED: R, G, B (Nijika Color!)✨
+    .LedRed = 0xff,
+    .LedGreen = 0xd7,
+    .LedBlue = 0x00,
+};
 
 void ds5_on_connected(void)
 {
@@ -72,4 +97,12 @@ void ds5_on_connected(void)
     bt_hid_control_get(0x09);
     bt_hid_control_get(0x20);
     bt_hid_control_get(0x22);
+    u8 data[64] = {0};
+    memcpy(data,&state,sizeof(SetStateData));
+    ds5_report_state_update(data, sizeof(SetStateData));
+}
+
+void ds5_on_disconnected(void)
+{
+    usb_pause(1);
 }

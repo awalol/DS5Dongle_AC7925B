@@ -245,6 +245,7 @@ c_SRC_FILES := \
 	../../../../apps/ds5dongle/usb.c \
 	../../../../apps/ds5dongle/common/queue.c \
 	../../../../apps/ds5dongle/common/crc.c \
+	../../../../apps/ds5dongle/common/ds5_audio.c \
 	../../../../apps/ds5dongle/common/ds5_bt.c \
 	../../../../apps/ds5dongle/common/ds5_hci.c \
 	../../../../apps/ds5dongle/common/ds5_usb.c \
@@ -274,6 +275,7 @@ s_SRC_FILES :=
 # 需要编译的 .cpp 文件
 cpp_SRC_FILES := \
 	../../../../apps/common/c++/cxx_runtime.cpp \
+	../../../../apps/ds5dongle/common/wdl_bridge.cpp \
 
 
 # 需要编译的 .cc 文件
@@ -283,10 +285,24 @@ cc_SRC_FILES :=
 # 需要编译的 .cxx 文件
 cxx_SRC_FILES :=
 
+# Third-party archives rebuilt with the AC792 toolchain.
+OPUS_INCLUDE_DIR ?= $(ROOT_PREFIX)/lib/opus_jieli/build/_deps/opus_upstream-src/include
+OPUS_LIB ?= $(ROOT_PREFIX)/lib/opus_jieli/build/lib/libopus.a
+WDL_INCLUDE_DIR ?= $(ROOT_PREFIX)/lib/wdl_jieli/build/_deps/wdl_upstream-src/WDL
+WDL_LIB ?= $(ROOT_PREFIX)/lib/wdl_jieli/build/lib/libwdl_resampler.a
+$(BUILD_DIR)/apps/ds5dongle/common/ds5_audio.c.o: INCLUDES += -I$(OPUS_INCLUDE_DIR)
+$(BUILD_DIR)/apps/ds5dongle/common/wdl_bridge.cpp.o: INCLUDES += -I$(WDL_INCLUDE_DIR)
+$(BUILD_DIR)/apps/ds5dongle/common/wdl_bridge.cpp.o: CXXFLAGS += -fsigned-char
+
 
 # LTO 会在 GNU ld --wrap 重定向之前解析库函数调用。
-# 因此生成当前目标专用的静态库，仅重命名其中的原始 ACL 入口。
-DS5_BTCTRL_LIB := $(BUILD_DIR)/btctrler_ds5.a
+# 因此生成当前目标专用的静态库，并在这里控制控制器扫描字符日志。
+# 0: 关闭串口/dlog 的 IPIP... 扫描日志（默认）；1: 开启原始扫描日志。
+DS5_BT_SCAN_LOG_ENABLE ?= 0
+ifeq ($(filter $(DS5_BT_SCAN_LOG_ENABLE),0 1),)
+$(error DS5_BT_SCAN_LOG_ENABLE must be 0 or 1)
+endif
+DS5_BTCTRL_LIB := $(BUILD_DIR)/btctrler_ds5_scanlog$(DS5_BT_SCAN_LOG_ENABLE).a
 DS5_HCI_PREPARE := $(ROOT_PREFIX)/apps/ds5dongle/tools/prepare_hci_archive.py
 PYTHON ?= python3
 
@@ -331,8 +347,8 @@ LFLAGS := \
 	../../../../cpu/wl83/liba/crypto_toolbox_Osize.a \
 	../../../../cpu/wl83/liba/lib_ccm_aes.a \
 	../../../../cpu/wl83/liba/update.a \
-	../../../../cpu/wl83/liba/libopus.a \
-	../../../../cpu/wl83/liba/libwdl_resampler.a \
+	$(OPUS_LIB) \
+	$(WDL_LIB) \
 	--end-group \
 	../../../../include_lib/c++/libstdc++/ucos/libemutls.a \
 	../../../../include_lib/c++/libstdc++/ucos/libc++.a \
@@ -411,9 +427,9 @@ clean:
 
 $(DS5_BTCTRL_LIB): $(ROOT_PREFIX)/cpu/wl83/liba/btctrler.a $(ROOT_PREFIX)/cpu/wl83/liba/btstack.a $(DS5_HCI_PREPARE)
 	$(info +HCI-ARCHIVE $@)
-	$(QUITE) $(PYTHON) $(DS5_HCI_PREPARE) --cc "$(CC)" --ar "$(AR)" --controller "$<" --stack "$(ROOT_PREFIX)/cpu/wl83/liba/btstack.a" --output "$@"
+	$(QUITE) $(PYTHON) $(DS5_HCI_PREPARE) --cc "$(CC)" --ar "$(AR)" --controller "$<" --stack "$(ROOT_PREFIX)/cpu/wl83/liba/btstack.a" --scan-debug "$(DS5_BT_SCAN_LOG_ENABLE)" --output "$@"
 
-$(OUT_ELF): $(DS5_BTCTRL_LIB)
+$(OUT_ELF): $(DS5_BTCTRL_LIB) $(OPUS_LIB) $(WDL_LIB)
 
 ifeq ($(LINK_AT), 1)
 $(OUT_ELF): $(OBJS)

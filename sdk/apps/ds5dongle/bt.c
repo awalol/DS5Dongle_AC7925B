@@ -21,10 +21,10 @@
 #define LOG_ERROR_ENABLE
 #define LOG_WARN_ENABLE
 #define LOG_INFO_ENABLE
-#define LOG_DEBUG_DISABLE
-#include "crc.h"
+#define LOG_DEBUG_ENABLE
 #include "debug.h"
 #include "ds5_bt.h"
+#include "crc.h"
 #include "ble/hci_ll.h"
 
 //*********************************************************************************//
@@ -269,7 +269,7 @@ static void bt_l2cap_handle_credits(const u8 *packet, u16 size)
         bool sent = false;
         if (queue_peek(&control_queue, &pkt))
         {
-            log_debug("L2CAP credits: send control cid=0x%04X", local_cid);
+            // log_debug("L2CAP credits: send control cid=0x%04X", local_cid);
             int status = l2cap_send(local_cid, pkt.data, (u16)pkt.len);
             if (status == 0)
             {
@@ -290,7 +290,7 @@ static void bt_l2cap_handle_credits(const u8 *packet, u16 size)
         bool sent = false;
         if (queue_peek(&interrupt_queue, &pkt))
         {
-            log_debug("L2CAP credits: send interrupt cid=0x%04X", local_cid);
+            // log_debug("L2CAP credits: send interrupt cid=0x%04X", local_cid);
             int status = l2cap_send(local_cid, pkt.data, (u16)pkt.len);
             if (status == 0)
             {
@@ -533,6 +533,7 @@ static int bt_hci_event_handler(void *evt) {
             break;
         case HCI_EVENT_DISCONNECTION_COMPLETE:
             log_info("HCI_EVENT_DISCONNECTION_COMPLETE: 0x%x", bt->value);
+            ds5_on_disconnected();
             bt_reset_connection();
             break;
         default:

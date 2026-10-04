@@ -12,6 +12,12 @@
 #define LOG_INFO_ENABLE
 #define LOG_DEBUG_DISABLE
 #include "debug.h"
+#include "ds5_audio.h"
+#include "usb/device/uac_audio.h"
+#include "app_core.h"
+#include "device_event.h"
+#include "device/uac_stream.h"
+#include "usb.h"
 
 
 static void custom_hid_rx_handler(const usb_dev usb_id, void *priv, u8 *buf, u32 len)
@@ -36,6 +42,11 @@ static void custom_hid_set_report_handler(const usb_dev usb_id, void *priv, u8 *
     ds5_usb_set_report(buf, len);
 }
 
+static void uac_speaker_rx_handler(void *priv, void *data, int size)
+{
+    ds5_audio_rx(data,size);
+}
+
 /**
  * @brief      usb 进入从机模式
  * @param:     usbfd: usb 端口号 0: FUSB端口  1:HUSB端口
@@ -46,6 +57,7 @@ static void custom_hid_set_report_handler(const usb_dev usb_id, void *priv, u8 *
  **/
 void usb_start(const usb_dev usbfd, u32 class)
 {
+    log_info("usb_start");
     if (class == 0) {
         class = USB_DEVICE_CLASS_CONFIG_2_0;
     }
@@ -55,7 +67,34 @@ void usb_start(const usb_dev usbfd, u32 class)
     custom_hid_set_set_report_hook(usbfd, NULL, custom_hid_set_report_handler);
 
     ds5_usb_init();
+    ds5_audio_init();
+}
+
+void usb_pause(const usb_dev usb_id)
+{
+    log_info("usb_pause");
+
+    usb_device_mode(usb_id,0);
 }
 
 void usb_init() {
+}
+
+int usb_audio_event_handler(void *evt)
+{
+    struct device_event *event = evt;
+    int usb_id = (int)event->arg;
+
+    switch (event->event)
+    {
+    case USB_AUDIO_PLAY_OPEN:
+        log_info("usb_audio_play_open");
+        set_uac_speaker_rx_handler(usb_id, NULL, uac_speaker_rx_handler);
+        break;
+    default:
+        log_info("%s> %d", __func__, event->event);
+        break;
+    }
+
+    return FALSE;
 }

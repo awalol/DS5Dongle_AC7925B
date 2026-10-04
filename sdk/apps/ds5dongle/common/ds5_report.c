@@ -8,6 +8,13 @@
 
 #include "bt.h"
 
+#define LOG_TAG "[DS5_REPORT]"
+#define LOG_ERROR_ENABLE
+#define LOG_WARN_ENABLE
+#define LOG_INFO_ENABLE
+#define LOG_DEBUG_ENABLE
+#include "debug.h"
+
 struct report
 {
     u8 id;
@@ -34,8 +41,8 @@ static const uint8_t state_init_data[63] = {
     0x00, 0xa7, 0xad, 0x60, 0x00, 0x29, 0x18, 0x00,
     0x53, 0x9f, 0x28, 0x35, 0xa5, 0xa8, 0x0c, 0x8b
 };
-u8 reportSeqCounter = 0;
-u8 packetCounter = 0;
+static u8 reportSeqCounter = 0;
+static u8 packetCounter = 0;
 
 void ds5_report_feature_update(u8 report_id, const u8* data, u8 size)
 {
@@ -100,4 +107,25 @@ void ds5_report_send_state(const SetStateData* state)
     packet[2] = 0x10;
     memcpy(packet + 3,state,sizeof(SetStateData));
     bt_hid_interrupt_send(packet,sizeof(packet));
+}
+
+void ds5_report_send_haptics(const s8* data)
+{
+    uint8_t pkt[142] = {0};
+    pkt[0] = 0x32;
+    pkt[1] = reportSeqCounter << 4;
+    reportSeqCounter = (reportSeqCounter + 1) & 0x0F;
+    pkt[2] = 0x11 | 0 << 6 | 1 << 7;
+    pkt[3] = 6;
+    pkt[4] = false ? 0b01111111 : 0b01111110;
+    const u8 buf_len = 48;
+    pkt[5] = buf_len; // VolumeHeadphones - guess but no work
+    pkt[6] = buf_len; // VolumeMic - guess but no work
+    pkt[7] = buf_len; // VolumeSpeaker - guess but no work
+    pkt[8] = buf_len; // AudioBufferLength
+    pkt[9] = packetCounter++;
+    pkt[10] = 0x12 | 0 << 6 | 1 << 7;
+    pkt[11] = 64;
+    memcpy(pkt + 12, data, 64);
+    bt_hid_interrupt_send(pkt,sizeof(pkt));
 }

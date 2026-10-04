@@ -281,5 +281,6 @@ void ds5_report_state_update(const u8* data, u8 len);
 u8 ds5_report_state_copy(u8* dst, u8 len);
 void ds5_report_state_reset();
 void ds5_report_send_state(const SetStateData* state);
+void ds5_report_send_haptics(const s8* data);
 
 #endif //SDK_DS5_REPORT_H

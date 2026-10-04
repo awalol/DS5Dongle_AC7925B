@@ -1,7 +1,7 @@
 //
 // Created by awalol on 2026/9/30.
 //
-#define LOG_TAG "[DS5_USB]"
+#define LOG_TAG "[DS5_HID]"
 #define LOG_ERROR_ENABLE
 #define LOG_WARN_ENABLE
 #define LOG_INFO_ENABLE
@@ -74,7 +74,7 @@ void ds5_usb_init()
     int err = task_create(ds5_hid_report_task, NULL, "hid_report");
     if (err)
     {
-        log_error("HID report task creation failed: %d\n", err);
+        log_error("HID report task create failed: %d\n", err);
         return;
     }
     task_created = true;
