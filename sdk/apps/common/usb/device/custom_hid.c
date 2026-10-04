@@ -262,12 +262,28 @@ static void *get_hid_report_desc(u32 index)
     return ptr;
 }
 
+static int custom_hid_is_ready(const usb_dev usb_id)
+{
+    if (custom_hid_info[usb_id] == NULL) {
+        return 0;
+    }
+
+    /*
+     * Some iOS hosts do not send HID SET_IDLE.  SET_CONFIGURATION has already
+     * completed when the host type becomes HOST_TYPE_IOS, so the interrupt
+     * endpoint configured by the USB reset handler is ready for use.  Keep the
+     * same compatibility rule as the SDK's standard HID implementation.
+     */
+    return custom_hid_info[usb_id]->cfg_done ||
+           usb_get_host_type(usb_id) == HOST_TYPE_IOS;
+}
+
 u32 custom_hid_tx_data(const usb_dev usb_id, const u8 *buffer, u32 len)
 {
     if (len > MAXP_SIZE_CUSTOM_HIDIN) {
         len = MAXP_SIZE_CUSTOM_HIDIN;
     }
-    if (custom_hid_info[usb_id] == NULL || custom_hid_info[usb_id]->cfg_done == 0) {
+    if (!custom_hid_is_ready(usb_id)) {
         return 0;
     }
     return usb_g_intr_write(usb_id, CUSTOM_HID_EP_IN, buffer, len);
@@ -285,10 +301,7 @@ static void custom_hid_rx_data(struct usb_device_t *usb_device, u32 ep)
 
 int custom_hid_get_ready(const usb_dev usb_id)
 {
-    if (custom_hid_info[usb_id] && custom_hid_info[usb_id]->cfg_done) {
-        return 1;
-    }
-    return 0;
+    return custom_hid_is_ready(usb_id);
 }
 
 void custom_hid_set_rx_hook(const usb_dev usb_id, void *priv, void (*rx_hook)(const usb_dev usb_id, void *priv, u8 *buf, u32 len))
@@ -309,7 +322,7 @@ void custom_hid_set_get_report_hook(const usb_dev usb_id, void *priv, void (*get
 
 void custom_hid_set_set_report_hook(const usb_dev usb_id, void *priv, void (*set_report_hook)(const usb_dev usb_id, void *priv, u8 *buf, u32 len))
 {
-    if (custom_hid_info) {
+    if (custom_hid_info[usb_id]) {
         custom_hid_info[usb_id]->set_report_priv = priv;
         custom_hid_info[usb_id]->set_report_hook = set_report_hook;
     }
