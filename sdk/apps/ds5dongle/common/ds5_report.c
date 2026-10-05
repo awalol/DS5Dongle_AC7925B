@@ -129,3 +129,30 @@ void ds5_report_send_haptics(const s8* data)
     memcpy(pkt + 12, data, 64);
     bt_hid_interrupt_send(pkt,sizeof(pkt));
 }
+
+void ds5_report_send_speaker_haptics(const u8* speaker,const s8* haptics)
+{
+    u16 i = 0;
+    uint8_t pkt[334] = {0};
+    pkt[i++] = 0x35;
+    pkt[i++] = reportSeqCounter << 4;
+    reportSeqCounter = (reportSeqCounter + 1) & 0x0F;
+    pkt[i++] = 0x11 | 0 << 6 | 1 << 7;
+    pkt[i++] = 6;
+    pkt[i++] = false ? 0b01111111 : 0b01111110;
+    const u8 buf_len = 48;
+    pkt[i++] = buf_len; // VolumeHeadphones - guess but no work
+    pkt[i++] = buf_len; // VolumeMic - guess but no work
+    pkt[i++] = buf_len; // VolumeSpeaker - guess but no work
+    pkt[i++] = buf_len; // AudioBufferLength
+    pkt[i++] = packetCounter++;
+    pkt[i++] = 0x13 | 0 << 6 | 1 << 7;
+    pkt[i++] = 200;
+    memcpy(pkt + i, speaker, 200);
+    i += 200;
+    pkt[i++] = 0x12 | 0 << 6 | 1 << 7;
+    pkt[i++] = 64;
+    memcpy(pkt + i, haptics, 64);
+
+    bt_hid_interrupt_send(pkt,sizeof(pkt));
+}

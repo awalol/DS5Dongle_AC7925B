@@ -13,7 +13,6 @@
 #include "os_api.h"
 #include "queue.h"
 #include "task.h"
-#include "wdl_bridge.h"
 #include "asm/src.h"
 #include "opus.h"
 
@@ -21,28 +20,54 @@
 #define UAC_CHANNELS 4
 #define UAC_FRAME_BYTES (UAC_CHANNELS * sizeof(s16))
 #define UAC_INPUT_FRAMES 48
+
 #define HAPTICS_BUF_SIZE 64
 #define HAPTICS_CHANNELS 2
 
+#define SPEAKER_BUF_SIZE (480 * 2)
+#define SPEAKER_OPUS_SIZE 200
+#define SPEAKER_CHANNELS 2
+
 #define HAPTICS_QUEUE_DEPTH 2
 #define HAPTICS_GAIN 1.0f
+
+#define PACKET_MODE 1
 
 /* 杰理 SRC 驱动引用的全局配置：完整 SDK 由 sdk/audio/log_config/lib_media_config.c
    提供，本工程没有编译该文件。数值是驱动内部输入缓冲的每通道帧数。*/
 const int config_resample_pcm_frame_buffer = 256;
 
-static void* haptics_src;
-static s16 haptics_src_stage[UAC_INPUT_FRAMES * HAPTICS_CHANNELS];
-static s8 haptics_buf[HAPTICS_BUF_SIZE];
-static u8 haptics_buf_pos;
-static u32 haptics_src_out_cnt;
-static wdl_resampler_t* spk_resampler;
-static OpusEncoder *opus_enc;
 static cbuffer_t uac_cbuf;
 static u8 uac_buf[UAC_CBUF_SIZE];
 static OS_SEM uac_sem;
+static OS_SEM bt_send_sem;
 static queue_t haptics_queue;
 static volatile bool task_created = false;
+
+static void* haptics_src;
+static s16 haptics_src_in[UAC_INPUT_FRAMES * HAPTICS_CHANNELS];
+static s8 haptics_buf[HAPTICS_BUF_SIZE];
+static u8 haptics_buf_pos;
+static u32 haptics_src_out_cnt;
+
+static void* speaker_src;
+static s16 speaker_src_in[UAC_INPUT_FRAMES * HAPTICS_CHANNELS];
+static s16 speaker_buf[SPEAKER_BUF_SIZE];
+static u16 speaker_buf_pos;
+static u32 speaker_src_out_cnt;
+static OpusEncoder *opus_enc;
+
+static struct
+{
+    bool fresh;
+    s8 data[64];
+} haptics_slot[2];
+
+static struct
+{
+    bool fresh;
+    u8 data[200];
+} speaker_slot[2];
 
 void ds5_audio_rx(u8* data, u32 size)
 {
@@ -94,11 +119,70 @@ static int haptics_src_output(void* priv, void* data, int len)
         if (haptics_buf_pos == HAPTICS_BUF_SIZE)
         {
             haptics_buf_pos = 0;
-            ds5_report_send_haptics(haptics_buf);
+            if (PACKET_MODE == 1)
+            {
+                memcpy(haptics_slot[1].data,haptics_buf,HAPTICS_BUF_SIZE);
+                haptics_slot[1].fresh = true;
+                os_sem_post(&bt_send_sem);
+            }
         }
     }
 
     return len;
+}
+
+static int speaker_src_output(void* priv, void* data, int len)
+{
+    s16* pcm = (s16*)data;
+    int samples = len / sizeof(s16); // 交织的 2 声道
+
+    if (speaker_src_out_cnt < 4)
+    {
+        speaker_src_out_cnt++;
+        log_info("speaker src out: %d bytes", len);
+    }
+
+    for (int i = 0; i < samples; i++)
+    {
+        speaker_buf[speaker_buf_pos++] = pcm[i];
+
+        if (speaker_buf_pos == SPEAKER_BUF_SIZE)
+        {
+            speaker_buf_pos = 0;
+            u8 opus_data[SPEAKER_OPUS_SIZE];
+            int encoded_len = opus_encode(opus_enc,speaker_buf,480,opus_data,SPEAKER_OPUS_SIZE);
+            if (encoded_len != 200)
+            {
+                log_error("opus encode len mismatch: %d", encoded_len);
+                return 0;
+            }
+            if (PACKET_MODE == 1)
+            {
+                memcpy(speaker_slot[1].data,opus_data,SPEAKER_OPUS_SIZE);
+                speaker_slot[1].fresh = true;
+                os_sem_post(&bt_send_sem);
+            }
+        }
+    }
+
+    return len;
+}
+
+static void ds5_bt_audio_send_task(void* priv)
+{
+    while (1)
+    {
+        os_sem_set(&bt_send_sem, 0);
+        if (!haptics_slot[1].fresh || !speaker_slot[1].fresh)
+        {
+            os_sem_pend(&bt_send_sem, 0);
+            continue;
+        }
+        haptics_slot[1].fresh = false;
+        speaker_slot[1].fresh = false;
+        ds5_report_send_speaker_haptics(speaker_slot[1].data, haptics_slot[1].data);
+        // ds5_report_send_haptics(haptics_slot[1].data);
+    }
 }
 
 static void ds5_audio_task(void* priv)
@@ -115,8 +199,8 @@ static void ds5_audio_task(void* priv)
             continue;
         }
 
-        int got = cbuf_read(&uac_cbuf, buffer, UAC_INPUT_FRAMES * UAC_FRAME_BYTES) / UAC_FRAME_BYTES;
-        if (got != UAC_INPUT_FRAMES)
+        int rlen = cbuf_read(&uac_cbuf, buffer, UAC_INPUT_FRAMES * UAC_FRAME_BYTES) / UAC_FRAME_BYTES;
+        if (rlen != UAC_INPUT_FRAMES)
         {
             continue;
         }
@@ -124,20 +208,34 @@ static void ds5_audio_task(void* priv)
         // 取出第 3、4 声道（haptics），整理成连续的 2 声道数据
         for (int i = 0; i < UAC_INPUT_FRAMES; i++)
         {
-            haptics_src_stage[i * 2] = buffer[i * UAC_CHANNELS + 2];
-            haptics_src_stage[i * 2 + 1] = buffer[i * UAC_CHANNELS + 3];
+            speaker_src_in[i * 2] = buffer[i * UAC_CHANNELS];
+            speaker_src_in[i * 2 + 1] = buffer[i * UAC_CHANNELS + 1];
+            haptics_src_in[i * 2] = buffer[i * UAC_CHANNELS + 2];
+            haptics_src_in[i * 2 + 1] = buffer[i * UAC_CHANNELS + 3];
         }
 
         // 48kHz -> 3kHz，杰理硬件 SRC；转换结果在 haptics_src_output 回调里给出
-        int wlen = src_base_write(haptics_src, haptics_src_stage, sizeof(haptics_src_stage));
-        if (wlen != (int)sizeof(haptics_src_stage))
+        int h_wlen = src_base_write(haptics_src, haptics_src_in, sizeof(haptics_src_in));
+        if (h_wlen != (int)sizeof(haptics_src_in))
         {
-            log_error("haptics src write: %d/%d", wlen, (int)sizeof(haptics_src_stage));
+            log_error("haptics src write: %d/%d", h_wlen, (int)sizeof(haptics_src_in));
         }
-        int pret = src_base_push_data_out(haptics_src);
-        if (pret)
+        int h_pret = src_base_push_data_out(haptics_src);
+        if (h_pret)
         {
-            log_error("haptics src push: %d", pret);
+            log_error("haptics src push: %d", h_pret);
+        }
+
+        // 51.2KHz -> 48KHz
+        int s_wlen = src_base_write(speaker_src, speaker_src_in, sizeof(speaker_src_in));
+        if (s_wlen != (int)sizeof(speaker_src_in))
+        {
+            log_error("speaker src write: %d/%d", s_wlen, (int)sizeof(speaker_src_in));
+        }
+        int s_pret = src_base_push_data_out(speaker_src);
+        if (s_pret)
+        {
+            log_error("speaker src push: %d", s_pret);
         }
     }
 }
@@ -160,11 +258,15 @@ void ds5_audio_init(void)
         log_info("haptics hw src opened");
     }
 
-    /* SPK: 51200 -> 48000，暂未接入处理链路，保留原来的 WDL 实例。*/
-    spk_resampler = wdl_resampler_create(51200, 48000, HAPTICS_CHANNELS,
-                                        UAC_INPUT_FRAMES, UAC_INPUT_FRAMES);
-
-    /*
+    speaker_src = src_base_open(SPEAKER_CHANNELS, 51200, 48000, AUDIO_ONLY_RESAMPLE);
+    if (!speaker_src)
+    {
+        log_error("speaker hw src open failed");
+    }else
+    {
+        src_base_set_output_handler(speaker_src, NULL, speaker_src_output);
+        log_info("speaker hw src opened");
+    }
     int opus_err = 0;
     opus_enc = opus_encoder_create(48000,2,OPUS_APPLICATION_RESTRICTED_CELT,&opus_err);
     if (opus_err != 0)
@@ -175,7 +277,6 @@ void ds5_audio_init(void)
     opus_encoder_ctl(opus_enc,OPUS_SET_BITRATE(200 * 8 * 100));
     opus_encoder_ctl(opus_enc,OPUS_SET_VBR(false));
     opus_encoder_ctl(opus_enc,OPUS_SET_COMPLEXITY(0)); // max 4
-    */
 
     bool queue_created = queue_init(&haptics_queue, HAPTICS_BUF_SIZE, HAPTICS_QUEUE_DEPTH);
     if (!queue_created)
@@ -189,6 +290,12 @@ void ds5_audio_init(void)
         log_error("audio semaphore create failed: %d", sem_err);
     }
 
+    int bt_sem_err = os_sem_create(&bt_send_sem, 0);
+    if (bt_sem_err)
+    {
+        log_error("bt send semaphore create failed: %d", bt_sem_err);
+    }
+
     cbuf_init(&uac_cbuf, uac_buf, sizeof(uac_buf));
 
     int task_err = task_create(ds5_audio_task, NULL, "audio");
@@ -197,7 +304,21 @@ void ds5_audio_init(void)
         log_error("audio task create failed: %d", task_err);
     }
 
-    if (!haptics_src || !spk_resampler || !queue_created || sem_err || task_err) // || opus_err
+    int bt_task_err = task_create(ds5_bt_audio_send_task, NULL, "bt_audio_send");
+    if (bt_task_err)
+    {
+        log_error("bt audio send task create failed: %d", task_err);
+    }
+
+
+    if (!haptics_src ||
+        !speaker_src ||
+        !queue_created ||
+        sem_err ||
+        bt_sem_err ||
+        task_err ||
+        bt_task_err ||
+        opus_err)
     {
         os_sem_del(&uac_sem, OS_DEL_ALWAYS);
         free(haptics_queue.data);
