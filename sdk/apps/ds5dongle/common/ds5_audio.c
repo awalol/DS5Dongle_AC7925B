@@ -27,8 +27,8 @@
 #define SPEAKER_BUF_SIZE (480 * 2)
 #define SPEAKER_OPUS_SIZE 200
 #define SPEAKER_CHANNELS 2
+#define SPEAKER_PCM_QUEUE_DEPTH 2
 
-#define HAPTICS_QUEUE_DEPTH 2
 #define HAPTICS_GAIN 1.0f
 
 #define PACKET_MODE 1
@@ -40,8 +40,7 @@ const int config_resample_pcm_frame_buffer = 256;
 static cbuffer_t uac_cbuf;
 static u8 uac_buf[UAC_CBUF_SIZE];
 static OS_SEM uac_sem;
-static OS_SEM bt_send_sem;
-static queue_t haptics_queue;
+static OS_SEM opus_sem;
 static volatile bool task_created = false;
 
 static void* haptics_src;
@@ -52,10 +51,16 @@ static u32 haptics_src_out_cnt;
 
 static void* speaker_src;
 static s16 speaker_src_in[UAC_INPUT_FRAMES * HAPTICS_CHANNELS];
+// SRC
 static s16 speaker_buf[SPEAKER_BUF_SIZE];
 static u16 speaker_buf_pos;
 static u32 speaker_src_out_cnt;
 static OpusEncoder *opus_enc;
+static queue_t spk_pcm_queue;
+typedef struct
+{
+    s16 data[SPEAKER_BUF_SIZE];
+} pcm_element;
 
 static struct
 {
@@ -86,6 +91,17 @@ void ds5_audio_rx(u8* data, u32 size)
     {
         os_sem_post(&uac_sem);
     }
+}
+
+static void ds5_bt_audio_send()
+{
+    if (!haptics_slot[1].fresh || !speaker_slot[1].fresh)
+    {
+        return;
+    }
+    haptics_slot[1].fresh = false;
+    speaker_slot[1].fresh = false;
+    ds5_report_send_speaker_haptics(speaker_slot[1].data, haptics_slot[1].data);
 }
 
 /* 硬件 SRC 的输出回调：在调用 src_base_write / src_base_push_data_out 的任务
@@ -123,7 +139,7 @@ static int haptics_src_output(void* priv, void* data, int len)
             {
                 memcpy(haptics_slot[1].data,haptics_buf,HAPTICS_BUF_SIZE);
                 haptics_slot[1].fresh = true;
-                os_sem_post(&bt_send_sem);
+                ds5_bt_audio_send();
             }
         }
     }
@@ -149,40 +165,18 @@ static int speaker_src_output(void* priv, void* data, int len)
         if (speaker_buf_pos == SPEAKER_BUF_SIZE)
         {
             speaker_buf_pos = 0;
-            u8 opus_data[SPEAKER_OPUS_SIZE];
-            int encoded_len = opus_encode(opus_enc,speaker_buf,480,opus_data,SPEAKER_OPUS_SIZE);
-            if (encoded_len != 200)
+            pcm_element element;
+            memcpy(element.data,speaker_buf,SPEAKER_BUF_SIZE * sizeof(s16));
+            if (queue_count(&spk_pcm_queue) == SPEAKER_PCM_QUEUE_DEPTH)
             {
-                log_error("opus encode len mismatch: %d", encoded_len);
-                return 0;
+                queue_pop(&spk_pcm_queue, NULL);
             }
-            if (PACKET_MODE == 1)
-            {
-                memcpy(speaker_slot[1].data,opus_data,SPEAKER_OPUS_SIZE);
-                speaker_slot[1].fresh = true;
-                os_sem_post(&bt_send_sem);
-            }
+            queue_push(&spk_pcm_queue, &element);
+            os_sem_post(&opus_sem);
         }
     }
 
     return len;
-}
-
-static void ds5_bt_audio_send_task(void* priv)
-{
-    while (1)
-    {
-        os_sem_set(&bt_send_sem, 0);
-        if (!haptics_slot[1].fresh || !speaker_slot[1].fresh)
-        {
-            os_sem_pend(&bt_send_sem, 0);
-            continue;
-        }
-        haptics_slot[1].fresh = false;
-        speaker_slot[1].fresh = false;
-        ds5_report_send_speaker_haptics(speaker_slot[1].data, haptics_slot[1].data);
-        // ds5_report_send_haptics(haptics_slot[1].data);
-    }
 }
 
 static void ds5_audio_task(void* priv)
@@ -240,6 +234,39 @@ static void ds5_audio_task(void* priv)
     }
 }
 
+static void ds5_audio_opus_task(void* priv)
+{
+    while (1)
+    {
+        os_sem_set(&opus_sem, 0);
+        if (queue_count(&spk_pcm_queue) == 0)
+        {
+            os_sem_pend(&opus_sem, 0);
+            continue;
+        }
+        pcm_element element;
+        if (!queue_pop(&spk_pcm_queue, &element))
+        {
+            log_error("spk_pcm_queue pop failed");
+            continue;
+        }
+
+        u8 opus_data[SPEAKER_OPUS_SIZE];
+        int encoded_len = opus_encode(opus_enc,element.data,480,opus_data,SPEAKER_OPUS_SIZE);
+        if (encoded_len != 200)
+        {
+            log_error("opus encode len mismatch: %d", encoded_len);
+            continue;
+        }
+        if (PACKET_MODE == 1)
+        {
+            memcpy(speaker_slot[1].data,opus_data,SPEAKER_OPUS_SIZE);
+            speaker_slot[1].fresh = true;
+            ds5_bt_audio_send();
+        }
+    }
+}
+
 void ds5_audio_init(void)
 {
     if (task_created)
@@ -278,10 +305,10 @@ void ds5_audio_init(void)
     opus_encoder_ctl(opus_enc,OPUS_SET_VBR(false));
     opus_encoder_ctl(opus_enc,OPUS_SET_COMPLEXITY(0)); // max 4
 
-    bool queue_created = queue_init(&haptics_queue, HAPTICS_BUF_SIZE, HAPTICS_QUEUE_DEPTH);
+    bool queue_created = queue_init(&spk_pcm_queue, sizeof(pcm_element), SPEAKER_PCM_QUEUE_DEPTH);
     if (!queue_created)
     {
-        log_error("haptics queue init failed");
+        log_error("pcm queue init failed");
     }
 
     int sem_err = os_sem_create(&uac_sem, 0);
@@ -290,22 +317,22 @@ void ds5_audio_init(void)
         log_error("audio semaphore create failed: %d", sem_err);
     }
 
-    int bt_sem_err = os_sem_create(&bt_send_sem, 0);
-    if (bt_sem_err)
+    int opus_sem_err = os_sem_create(&opus_sem, 0);
+    if (opus_sem_err)
     {
-        log_error("bt send semaphore create failed: %d", bt_sem_err);
+        log_error("bt send semaphore create failed: %d", opus_sem_err);
     }
 
     cbuf_init(&uac_cbuf, uac_buf, sizeof(uac_buf));
 
-    int task_err = task_create(ds5_audio_task, NULL, "audio");
+    int task_err = task_create(ds5_audio_task, NULL, "audio_src");
     if (task_err)
     {
         log_error("audio task create failed: %d", task_err);
     }
 
-    int bt_task_err = task_create(ds5_bt_audio_send_task, NULL, "bt_audio_send");
-    if (bt_task_err)
+    int opus_task_err = task_create(ds5_audio_opus_task, NULL, "audio_opus");
+    if (opus_task_err)
     {
         log_error("bt audio send task create failed: %d", task_err);
     }
@@ -315,14 +342,14 @@ void ds5_audio_init(void)
         !speaker_src ||
         !queue_created ||
         sem_err ||
-        bt_sem_err ||
+        opus_sem_err ||
         task_err ||
-        bt_task_err ||
+        opus_task_err ||
         opus_err)
     {
         os_sem_del(&uac_sem, OS_DEL_ALWAYS);
-        free(haptics_queue.data);
-        haptics_queue.data = NULL;
+        free(spk_pcm_queue.data);
+        spk_pcm_queue.data = NULL;
         if (haptics_src)
         {
             src_base_close(haptics_src);

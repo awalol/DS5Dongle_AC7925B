@@ -29,9 +29,9 @@ const struct task_info task_info_table[] = {
     {"btencry",             14,     512,      128 },
     {"btctrler",            19,     512,      384 },
     {"btstack",             18,     768,      384 },
-    {"hid_report",          10,     512,        0 },
-    {"audio",               10,     8192,        0 },
-    {"bt_audio_send",       10,     512,        0 },
+    {"hid_report",           8,     512,        0, NULL, 1 },
+    {"audio_src",           12,     768,        0, NULL, 2 },
+    {"audio_opus",          10,     8192,        0, NULL, 2 },
 
     {0, 0, 0, 0, 0},
 };
