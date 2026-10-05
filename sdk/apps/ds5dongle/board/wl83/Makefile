@@ -304,7 +304,11 @@ $(error DS5_BT_SCAN_LOG_ENABLE must be 0 or 1)
 endif
 DS5_BTCTRL_LIB := $(BUILD_DIR)/btctrler_ds5_scanlog$(DS5_BT_SCAN_LOG_ENABLE).a
 DS5_HCI_PREPARE := $(ROOT_PREFIX)/apps/ds5dongle/tools/prepare_hci_archive.py
+ifeq ($(OS), Windows_NT)
+PYTHON ?= python
+else
 PYTHON ?= python3
+endif
 
 # 链接参数
 LFLAGS := \
