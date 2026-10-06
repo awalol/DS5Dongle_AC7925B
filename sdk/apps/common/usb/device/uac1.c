@@ -2336,12 +2336,12 @@ static u32 uac_spk_register(const usb_dev usb_id)
 #endif
         spk_info[usb_id]->spk_dma_buffer = usb_alloc_ep_dmabuffer(usb_id, SPK_ISO_EP_OUT, spk_get_max_frame_len() + ep_reserved_len);
     }
-    spk_info[usb_id]->spk_def_vol = vol_convert(get_uac_spk_def_vol());
+    spk_info[usb_id]->spk_def_vol = 0x0;
     spk_info[usb_id]->spk_left_vol = spk_info[usb_id]->spk_def_vol;
     spk_info[usb_id]->spk_right_vol = spk_info[usb_id]->spk_def_vol;
-    spk_info[usb_id]->spk_max_vol = vol_convert(100);
-    spk_info[usb_id]->spk_min_vol = vol_convert(0);
-    spk_info[usb_id]->spk_vol_res = 0x30;
+    spk_info[usb_id]->spk_max_vol = 0x0000;
+    spk_info[usb_id]->spk_min_vol = 0x9c00;
+    spk_info[usb_id]->spk_vol_res = 0x0100;
     spk_info[usb_id]->spk_mute = 0;
     spk_info[usb_id]->ps4_mode = 0;
 
@@ -2375,10 +2375,10 @@ static u32 uac_mic_register(const usb_dev usb_id)
         mic_info[usb_id]->mic_dma_buffer = usb_alloc_ep_dmabuffer(usb_id, MIC_ISO_EP_IN | USB_DIR_IN, mic_get_max_frame_len());
     }
 
-    mic_info[usb_id]->mic_max_vol = vol_convert(100);
-    mic_info[usb_id]->mic_min_vol = vol_convert(0);
-    mic_info[usb_id]->mic_vol_res = 0x30;
-    mic_info[usb_id]->mic_def_vol = vol_convert(13 / 14.0 * 100);
+    mic_info[usb_id]->mic_max_vol = 0x3000;
+    mic_info[usb_id]->mic_min_vol = 0x0;
+    mic_info[usb_id]->mic_vol_res = 0x007a;
+    mic_info[usb_id]->mic_def_vol = mic_info[usb_id]->mic_max_vol;
     mic_info[usb_id]->mic_vol = mic_info[usb_id]->mic_def_vol;
     mic_info[usb_id]->mic_mute = 0;
     mic_info[usb_id]->ps4_mode = 0;

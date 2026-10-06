@@ -47,6 +47,11 @@ static void uac_speaker_rx_handler(void *priv, void *data, int size)
     ds5_audio_rx(data,size);
 }
 
+static int uac_mic_tx_handler(void *priv, void *data, int size) {
+    memset(data,0,size);
+    return size;
+}
+
 /**
  * @brief      usb 进入从机模式
  * @param:     usbfd: usb 端口号 0: FUSB端口  1:HUSB端口
@@ -91,6 +96,10 @@ int usb_audio_event_handler(void *evt)
     case USB_AUDIO_PLAY_OPEN:
         log_info("usb_audio_play_open");
         set_uac_speaker_rx_handler(usb_id, NULL, uac_speaker_rx_handler);
+        break;
+    case USB_AUDIO_MIC_OPEN:
+        log_info("usb_audio_mic_open");
+        set_uac_mic_tx_handler(usb_id,NULL,uac_mic_tx_handler);
         break;
     default:
         log_info("%s> %d", __func__, event->event);
