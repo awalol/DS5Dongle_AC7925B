@@ -76,7 +76,7 @@ void ds5_hid_control_data(const u8* packet, u16 size)
     }
 }
 
-SetStateData state = {
+static SetStateData init_state = {
     .AllowAudioControl = 1,
     .AllowLedColor = 1,
     .MicSelect = 0,
@@ -97,9 +97,7 @@ void ds5_on_connected(void)
     bt_hid_control_get(0x09);
     bt_hid_control_get(0x20);
     bt_hid_control_get(0x22);
-    u8 data[64] = {0};
-    memcpy(data,&state,sizeof(SetStateData));
-    ds5_report_state_update(data, sizeof(SetStateData));
+    ds5_report_send_state(&init_state);
 }
 
 void ds5_on_disconnected(void)
