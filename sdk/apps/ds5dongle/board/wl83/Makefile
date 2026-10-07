@@ -250,6 +250,7 @@ c_SRC_FILES := \
 	../../../../apps/ds5dongle/common/ds5_hci.c \
 	../../../../apps/ds5dongle/common/ds5_usb.c \
 	../../../../apps/ds5dongle/common/ds5_report.c \
+	../../../../apps/ds5dongle/common/ds5_state.c \
 	../../../../apps/ds5dongle/bt.c \
 	../../../../apps/ds5dongle/common/uart_cmd.c \
 	../../../../apps/ds5dongle/ibtstack.c \

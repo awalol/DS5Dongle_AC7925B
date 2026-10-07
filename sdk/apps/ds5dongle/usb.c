@@ -19,6 +19,8 @@
 #include "device/uac_stream.h"
 #include "usb.h"
 
+#include "ds5_state.h"
+
 
 static void custom_hid_rx_handler(const usb_dev usb_id, void *priv, u8 *buf, u32 len)
 {
@@ -90,17 +92,24 @@ int usb_audio_event_handler(void *evt)
 {
     struct device_event *event = evt;
     int usb_id = (int)event->arg;
+    int value = event->value;
 
     switch (event->event)
     {
     case USB_AUDIO_PLAY_OPEN:
-        log_info("usb_audio_play_open");
+        log_info("USB_AUDIO_PLAY_OPEN");
         set_uac_speaker_rx_handler(usb_id, NULL, uac_speaker_rx_handler);
         break;
     case USB_AUDIO_MIC_OPEN:
-        log_info("usb_audio_mic_open");
+        log_info("USB_AUDIO_MIC_OPEN");
         set_uac_mic_tx_handler(usb_id,NULL,uac_mic_tx_handler);
         break;
+    case USB_AUDIO_SET_PLAY_VOL:
+            int l = (int)((u32)value & 0xffff);
+            int r = (int)(((u32)value >> 16) & 0xffff);
+            log_debug("USB_AUDIO_SET_PLAY%d_VOL : %d %d", usb_id, l, r);
+            ds5_state_set_vol(l,255);
+            break;
     default:
         log_info("%s> %d", __func__, event->event);
         break;

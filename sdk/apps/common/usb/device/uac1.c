@@ -882,33 +882,64 @@ struct mic_info_t *mic_info[USB_MAX_HW_NUM];
 static void open_spk(struct usb_device_t *usb_device);
 static void open_mic(struct usb_device_t *usb_device);
 
-static u32 vol_convert(u16 v)
+/* to_usb: 1 = level to USB volume, 0 = USB volume to level. */
+static u32 vol_spk_convert(u16 v, u8 to_usb)
 {
-    const u16 vol_table[] = {
-        0xe3a0, 0xe461, 0xe519, 0xe5c8, 0xe670, 0xe711, 0xe7ac, 0xe840, 0xe8cf, 0xe959,
-        0xe9df, 0xea60, 0xeadc, 0xeb55, 0xebca, 0xec3c, 0xecab, 0xed16, 0xed7f, 0xede5,
-        0xee48, 0xeea9, 0xef08, 0xef64, 0xefbe, 0xf016, 0xf06c, 0xf0c0, 0xf113, 0xf164,
-        0xf1b3, 0xf200, 0xf24c, 0xf297, 0xf2e0, 0xf328, 0xf36e, 0xf3b4, 0xf3f8, 0xf43a,
-        0xf47c, 0xf4bd, 0xf4fc, 0xf53b, 0xf579, 0xf5b5, 0xf5f1, 0xf62c, 0xf666, 0xf69f,
-        0xf6d7, 0xf70e, 0xf745, 0xf77b, 0xf7b0, 0xf7e5, 0xf818, 0xf84b, 0xf87e, 0xf8b0,
-        0xf8e1, 0xf911, 0xf941, 0xf970, 0xf99f, 0xf9cd, 0xf9fb, 0xfa28, 0xfa55, 0xfa81,
-        0xfaad, 0xfad8, 0xfb03, 0xfb2d, 0xfb56, 0xfb80, 0xfba9, 0xfbd1, 0xfbf9, 0xfc21,
-        0xfc48, 0xfc6f, 0xfc95, 0xfcbb, 0xfce1, 0xfd06, 0xfd2b, 0xfd50, 0xfd74, 0xfd98,
-        0xfdbc, 0xfddf, 0xfe02, 0xfe25, 0xfe47, 0xfe69, 0xfe8b, 0xfead, 0xfece, 0xfeef,
-        0xff0f,
+    static const u16 vol_table[] = {
+        0x9c00, 0x9d00, 0x9e00, 0x9f00, 0xa000, 0xa100, 0xa200, 0xa300, 0xa400, 0xa500,
+        0xa600, 0xa700, 0xa800, 0xa900, 0xaa00, 0xab00, 0xac00, 0xad00, 0xae00, 0xaf00,
+        0xb000, 0xb100, 0xb200, 0xb300, 0xb400, 0xb500, 0xb600, 0xb700, 0xb800, 0xb900,
+        0xba00, 0xbb00, 0xbc00, 0xbd00, 0xbe00, 0xbf00, 0xc000, 0xc100, 0xc200, 0xc300,
+        0xc400, 0xc500, 0xc600, 0xc700, 0xc800, 0xc900, 0xca00, 0xcb00, 0xcc00, 0xcd00,
+        0xce00, 0xcf00, 0xd000, 0xd100, 0xd200, 0xd300, 0xd400, 0xd500, 0xd600, 0xd700,
+        0xd800, 0xd900, 0xda00, 0xdb00, 0xdc00, 0xdd00, 0xde00, 0xdf00, 0xe000, 0xe100,
+        0xe200, 0xe300, 0xe400, 0xe500, 0xe600, 0xe700, 0xe800, 0xe900, 0xea00, 0xeb00,
+        0xec00, 0xed00, 0xee00, 0xef00, 0xf000, 0xf100, 0xf200, 0xf300, 0xf400, 0xf500,
+        0xf600, 0xf700, 0xf800, 0xf900, 0xfa00, 0xfb00, 0xfc00, 0xfd00, 0xfe00, 0xff00,
+        0x0000,
     };
 
-    if (v <= 100) {
-        return vol_table[v];
+    if (to_usb) {
+        return vol_table[v > 100 ? 100 : v];
     }
 
-    for (int i = 0; i < sizeof(vol_table) / 2; i++) {
-        if (v <= vol_table[i]) {
+    for (int i = 0; i < sizeof(vol_table) / sizeof(vol_table[0]); i++) {
+        if ((s16)v <= (s16)vol_table[i]) {
             return i;
         }
     }
 
-    return 0;
+    return 100;
+}
+
+/* to_usb: 1 = level to USB volume, 0 = USB volume to level. */
+static u32 vol_mic_convert(u16 v, u8 to_usb)
+{
+    static const u16 vol_table[] = {
+        0x0000, 0x007b, 0x00f6, 0x0171, 0x01ec, 0x0266, 0x02e1, 0x035c, 0x03d7, 0x0452,
+        0x04cd, 0x0548, 0x05c3, 0x063d, 0x06b8, 0x0733, 0x07ae, 0x0829, 0x08a4, 0x091f,
+        0x099a, 0x0a14, 0x0a8f, 0x0b0a, 0x0b85, 0x0c00, 0x0c7b, 0x0cf6, 0x0d71, 0x0dec,
+        0x0e66, 0x0ee1, 0x0f5c, 0x0fd7, 0x1052, 0x10cd, 0x1148, 0x11c3, 0x123d, 0x12b8,
+        0x1333, 0x13ae, 0x1429, 0x14a4, 0x151f, 0x159a, 0x1614, 0x168f, 0x170a, 0x1785,
+        0x1800, 0x187b, 0x18f6, 0x1971, 0x19ec, 0x1a66, 0x1ae1, 0x1b5c, 0x1bd7, 0x1c52,
+        0x1ccd, 0x1d48, 0x1dc3, 0x1e3d, 0x1eb8, 0x1f33, 0x1fae, 0x2029, 0x20a4, 0x211f,
+        0x219a, 0x2214, 0x228f, 0x230a, 0x2385, 0x2400, 0x247b, 0x24f6, 0x2571, 0x25ec,
+        0x2666, 0x26e1, 0x275c, 0x27d7, 0x2852, 0x28cd, 0x2948, 0x29c3, 0x2a3d, 0x2ab8,
+        0x2b33, 0x2bae, 0x2c29, 0x2ca4, 0x2d1f, 0x2d9a, 0x2e14, 0x2e8f, 0x2f0a, 0x2f85,
+        0x3000,
+    };
+
+    if (to_usb) {
+        return vol_table[v > 100 ? 100 : v];
+    }
+
+    for (int i = 0; i < sizeof(vol_table) / sizeof(vol_table[0]); i++) {
+        if ((s16)v <= (s16)vol_table[i]) {
+            return i;
+        }
+    }
+
+    return 100;
 }
 
 void uac_get_cur_vol(const usb_dev usb_id, u16 *l_vol, u16 *r_vol)
@@ -922,10 +953,10 @@ void uac_get_cur_vol(const usb_dev usb_id, u16 *l_vol, u16 *r_vol)
     if (spk_info[usb_id]) {
         if (!spk_info[usb_id]->spk_mute) {
             if (l_vol) {
-                *l_vol = vol_convert(spk_info[usb_id]->spk_left_vol);
+                *l_vol = vol_spk_convert(spk_info[usb_id]->spk_left_vol, 0);
             }
             if (r_vol) {
-                *r_vol = vol_convert(spk_info[usb_id]->spk_right_vol);
+                *r_vol = vol_spk_convert(spk_info[usb_id]->spk_right_vol, 0);
             }
         }
     }
@@ -935,7 +966,7 @@ u16 uac_get_mic_vol(const usb_dev usb_id)
 {
     if (mic_info[usb_id]) {
         if (!mic_info[usb_id]->mic_mute) {
-            return vol_convert(mic_info[usb_id]->mic_vol);
+            return vol_mic_convert(mic_info[usb_id]->mic_vol, 0);
         }
     }
     return 0;
@@ -972,8 +1003,8 @@ static u32 uac_vol_handler(struct usb_device_t *usb_device, struct usb_ctrlreque
                 spk_info[usb_id]->spk_mute = 1;
             } else {
                 uac_mute_volume(usb_id, SPK_FEATURE_UNIT_ID,
-                                vol_convert(spk_info[usb_id]->spk_left_vol),
-                                vol_convert(spk_info[usb_id]->spk_right_vol));
+                                vol_spk_convert(spk_info[usb_id]->spk_left_vol, 0),
+                                vol_spk_convert(spk_info[usb_id]->spk_right_vol, 0));
                 spk_info[usb_id]->spk_mute = 0;
             }
         } else if (HIBYTE(setup->wIndex) == MIC_FEATURE_UNIT_ID) {
@@ -985,7 +1016,7 @@ static u32 uac_vol_handler(struct usb_device_t *usb_device, struct usb_ctrlreque
                 uac_mute_volume(usb_id, MIC_FEATURE_UNIT_ID, 0, 0);
                 mic_info[usb_id]->mic_mute = 1;
             } else {
-                uac_mute_volume(usb_id, MIC_FEATURE_UNIT_ID, vol_convert(mic_info[usb_id]->mic_vol), 0);
+                uac_mute_volume(usb_id, MIC_FEATURE_UNIT_ID, vol_mic_convert(mic_info[usb_id]->mic_vol, 0), 0);
                 mic_info[usb_id]->mic_mute = 0;
             }
         }
@@ -1005,18 +1036,18 @@ static u32 uac_vol_handler(struct usb_device_t *usb_device, struct usb_ctrlreque
                 spk_info[usb_id]->spk_right_vol = volume;
             }
             if (spk_info[usb_id]->ps4_mode) {
-                spk_info[usb_id]->spk_left_vol = vol_convert(100);
-                spk_info[usb_id]->spk_right_vol = vol_convert(100);
+                spk_info[usb_id]->spk_left_vol = vol_spk_convert(100, 1);
+                spk_info[usb_id]->spk_right_vol = vol_spk_convert(100, 1);
             }
             if (usb_get_host_type(usb_id) == HOST_TYPE_ANDROID) {
                 //安卓没有音量同步，需要把uac端音量设最大
-                spk_info[usb_id]->spk_left_vol = vol_convert(100);
-                spk_info[usb_id]->spk_right_vol = vol_convert(100);
+                spk_info[usb_id]->spk_left_vol = vol_spk_convert(100, 1);
+                spk_info[usb_id]->spk_right_vol = vol_spk_convert(100, 1);
             }
             if (!spk_info[usb_id]->spk_mute && !spk_info[usb_id]->ps4_mode) {
                 uac_mute_volume(usb_id, SPK_FEATURE_UNIT_ID,
-                                vol_convert(spk_info[usb_id]->spk_left_vol),
-                                vol_convert(spk_info[usb_id]->spk_right_vol));
+                                vol_spk_convert(spk_info[usb_id]->spk_left_vol, 0),
+                                vol_spk_convert(spk_info[usb_id]->spk_right_vol, 0));
             }
         } else if (HIBYTE(setup->wIndex) == MIC_FEATURE_UNIT_ID) {
             if (mic_info[usb_id] == NULL) {
@@ -1029,7 +1060,7 @@ static u32 uac_vol_handler(struct usb_device_t *usb_device, struct usb_ctrlreque
             /* mic_info->mic_vol = 99; */
             /* } */
             if (!mic_info[usb_id]->mic_mute) {
-                uac_mute_volume(usb_id, MIC_FEATURE_UNIT_ID, vol_convert(mic_info[usb_id]->mic_vol), 0);
+                uac_mute_volume(usb_id, MIC_FEATURE_UNIT_ID, vol_mic_convert(mic_info[usb_id]->mic_vol, 0), 0);
             }
         }
         break;
@@ -1053,8 +1084,8 @@ static u32 uac_vol_handler(struct usb_device_t *usb_device, struct usb_ctrlreque
                 spk_info[usb_id]->ps4_mode = read_ep[0];
                 usb_set_host_type(usb_id, HOST_TYPE_PS4);
                 if (read_ep[0]) {
-                    spk_info[usb_id]->spk_left_vol = vol_convert(100);
-                    spk_info[usb_id]->spk_right_vol = vol_convert(100);
+                    spk_info[usb_id]->spk_left_vol = vol_spk_convert(100, 1);
+                    spk_info[usb_id]->spk_right_vol = vol_spk_convert(100, 1);
                     uac_mute_volume(usb_id, SPK_FEATURE_UNIT_ID, 100, 100);
                 }
             }
@@ -2336,11 +2367,11 @@ static u32 uac_spk_register(const usb_dev usb_id)
 #endif
         spk_info[usb_id]->spk_dma_buffer = usb_alloc_ep_dmabuffer(usb_id, SPK_ISO_EP_OUT, spk_get_max_frame_len() + ep_reserved_len);
     }
-    spk_info[usb_id]->spk_def_vol = 0x0;
+    spk_info[usb_id]->spk_def_vol = vol_spk_convert(get_uac_spk_def_vol(), 1);
     spk_info[usb_id]->spk_left_vol = spk_info[usb_id]->spk_def_vol;
     spk_info[usb_id]->spk_right_vol = spk_info[usb_id]->spk_def_vol;
-    spk_info[usb_id]->spk_max_vol = 0x0000;
-    spk_info[usb_id]->spk_min_vol = 0x9c00;
+    spk_info[usb_id]->spk_max_vol = vol_spk_convert(100, 1);
+    spk_info[usb_id]->spk_min_vol = vol_spk_convert(0, 1);
     spk_info[usb_id]->spk_vol_res = 0x0100;
     spk_info[usb_id]->spk_mute = 0;
     spk_info[usb_id]->ps4_mode = 0;
@@ -2375,10 +2406,10 @@ static u32 uac_mic_register(const usb_dev usb_id)
         mic_info[usb_id]->mic_dma_buffer = usb_alloc_ep_dmabuffer(usb_id, MIC_ISO_EP_IN | USB_DIR_IN, mic_get_max_frame_len());
     }
 
-    mic_info[usb_id]->mic_max_vol = 0x3000;
-    mic_info[usb_id]->mic_min_vol = 0x0;
+    mic_info[usb_id]->mic_max_vol = vol_mic_convert(100, 1);
+    mic_info[usb_id]->mic_min_vol = vol_mic_convert(0, 1);
     mic_info[usb_id]->mic_vol_res = 0x007a;
-    mic_info[usb_id]->mic_def_vol = mic_info[usb_id]->mic_max_vol;
+    mic_info[usb_id]->mic_def_vol = vol_mic_convert(13 * 100 / 14, 1);
     mic_info[usb_id]->mic_vol = mic_info[usb_id]->mic_def_vol;
     mic_info[usb_id]->mic_mute = 0;
     mic_info[usb_id]->ps4_mode = 0;

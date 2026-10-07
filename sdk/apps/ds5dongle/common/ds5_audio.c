@@ -29,7 +29,7 @@
 #define SPEAKER_CHANNELS 2
 #define SPEAKER_PCM_QUEUE_DEPTH 2
 
-#define HAPTICS_GAIN 1.0f
+#define HAPTICS_GAIN 2.0f
 
 #define PACKET_MODE 1
 
@@ -101,7 +101,7 @@ static void ds5_bt_audio_send()
     }
     haptics_slot[1].fresh = false;
     speaker_slot[1].fresh = false;
-    ds5_report_send_speaker_haptics(speaker_slot[1].data, haptics_slot[1].data);
+    ds5_report_send_state_speaker_haptics(speaker_slot[1].data, haptics_slot[1].data);
 }
 
 /* 硬件 SRC 的输出回调：在调用 src_base_write / src_base_push_data_out 的任务
