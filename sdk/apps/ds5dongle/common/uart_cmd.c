@@ -77,7 +77,7 @@ static void uart_cmd_task(void *priv)
         return;
     }
 
-    puts("UART commands ready: U=update, I=inquiry, S=unsupported\n");
+    puts("UART commands ready: U=update, I=inquiry, S=usb\n");
     while (1) {
         int len = dev_read(hdl, packet, sizeof(packet));
         if (len > 0) {
