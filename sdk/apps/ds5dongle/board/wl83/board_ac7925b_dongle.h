@@ -6,7 +6,6 @@
 // #define CONFIG_SFC_ENABLE
 #define CONFIG_BT_ENABLE
 // #define CONFIG_NO_SDRAM_ENABLE
-// #define CONFIG_LZ4_COMPRESS_APP_CODE_ENABLE     //使用LZ4压缩代码
 
 
 //*********************************************************************************//

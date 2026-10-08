@@ -222,7 +222,7 @@ static void app_task_handler(void *p)
     sys_timer_task_init();
 
 #ifdef CONFIG_RTOS_STACK_CHECK_ENABLE
-    sys_timer_add(NULL, rtos_stack_check_func, 60 * 1000);
+    sys_timer_add(NULL, rtos_stack_check_func, 5 * 1000);
 #endif
 
 #ifdef CONFIG_MEM_LEAK_CHECK_ENABLE
