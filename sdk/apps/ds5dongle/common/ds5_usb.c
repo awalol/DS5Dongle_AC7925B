@@ -9,6 +9,7 @@
 #include "debug.h"
 
 #include "task.h"
+#include "os/os_api.h"
 #include "usb/device/custom_hid.h"
 #include "ds5_report.h"
 #include "ds5_usb.h"
@@ -16,6 +17,12 @@
 static u8 state_data[64];
 
 static bool task_created = false;
+static OS_SEM hid_tx_sem;
+
+void ds5_usb_tx_done(void)
+{
+    os_sem_post(&hid_tx_sem);
+}
 
 static void ds5_hid_report_task(void* priv)
 {
@@ -23,7 +30,7 @@ static void ds5_hid_report_task(void* priv)
     {
         if (!custom_hid_get_ready(1))
         {
-            os_time_dly(1); // 未就绪时让出 CPU
+            os_sem_pend(&hid_tx_sem, 1); // 发送完成时唤醒，超时后重查配置/端点状态
             continue;
         }
         ds5_report_state_copy(state_data + 1, 63);
@@ -71,6 +78,7 @@ void ds5_usb_init()
     {
         return;
     }
+    os_sem_create(&hid_tx_sem, 0);
     int err = task_create(ds5_hid_report_task, NULL, "hid_report");
     if (err)
     {

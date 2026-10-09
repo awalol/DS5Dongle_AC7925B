@@ -22,6 +22,11 @@
 #include "ds5_state.h"
 
 
+static void custom_hid_tx_handler(const usb_dev usb_id)
+{
+    ds5_usb_tx_done();
+}
+
 static void custom_hid_rx_handler(const usb_dev usb_id, void *priv, u8 *buf, u32 len)
 {
     log_debug("custom_hid_rx_handler >");
@@ -75,6 +80,7 @@ void usb_start(const usb_dev usbfd, u32 class)
     custom_hid_set_set_report_hook(usbfd, NULL, custom_hid_set_report_handler);
 
     ds5_usb_init();
+    custom_hid_set_tx_hook(usbfd, custom_hid_tx_handler);
     ds5_audio_init();
 }
 

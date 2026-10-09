@@ -21,12 +21,14 @@
 #define USB_HID_EP_DMA_BUFFER_KEEP_ENABLE  0
 
 typedef void (*hid_rx_handle_t)(const usb_dev usb_id, void *hdl, u8 *buffer, u32 len);
+typedef void (*hid_tx_handle_t)(const usb_dev usb_id);
 typedef void (*hid_get_report_handle_t)(const usb_dev usb_id, void *hdl, u8 *buffer, u32 len);
 typedef void (*hid_set_report_handle_t)(const usb_dev usb_id, void *hdl, u8 *buffer, u32 len);
 struct custom_hid_hdl {
     u8 cfg_done;
     void *priv_hdl;
     hid_rx_handle_t hid_rx_hook;
+    hid_tx_handle_t hid_tx_hook;
 
     void *get_report_priv;
     hid_get_report_handle_t get_report_hook;
@@ -283,10 +285,20 @@ u32 custom_hid_tx_data(const usb_dev usb_id, const u8 *buffer, u32 len)
     if (len > MAXP_SIZE_CUSTOM_HIDIN) {
         len = MAXP_SIZE_CUSTOM_HIDIN;
     }
-    if (!custom_hid_is_ready(usb_id)) {
+    if (!custom_hid_get_ready(usb_id)) {
         return 0;
     }
+    usb_set_intr_txe(usb_id, CUSTOM_HID_EP_IN);
     return usb_g_intr_write(usb_id, CUSTOM_HID_EP_IN, buffer, len);
+}
+
+static void custom_hid_intrtx(struct usb_device_t *usb_device, u32 ep)
+{
+    const usb_dev usb_id = usb_device2id(usb_device);
+    usb_clr_intr_txe(usb_id, ep & 0x0f);
+    if (custom_hid_info[usb_id] && custom_hid_info[usb_id]->hid_tx_hook) {
+        custom_hid_info[usb_id]->hid_tx_hook(usb_id);
+    }
 }
 
 static void custom_hid_rx_data(struct usb_device_t *usb_device, u32 ep)
@@ -301,7 +313,15 @@ static void custom_hid_rx_data(struct usb_device_t *usb_device, u32 ep)
 
 int custom_hid_get_ready(const usb_dev usb_id)
 {
-    return custom_hid_is_ready(usb_id);
+    return custom_hid_is_ready(usb_id) &&
+           !(usb_read_txcsr(usb_id, CUSTOM_HID_EP_IN) & TXCSRP_TxPktRdy);
+}
+
+void custom_hid_set_tx_hook(const usb_dev usb_id, void (*tx_hook)(const usb_dev usb_id))
+{
+    if (custom_hid_info[usb_id]) {
+        custom_hid_info[usb_id]->hid_tx_hook = tx_hook;
+    }
 }
 
 void custom_hid_set_rx_hook(const usb_dev usb_id, void *priv, void (*rx_hook)(const usb_dev usb_id, void *priv, u8 *buf, u32 len))
@@ -351,6 +371,7 @@ static void custom_hid_endpoint_init(struct usb_device_t *usb_device, u32 itf)
 {
     const usb_dev usb_id = usb_device2id(usb_device);
     usb_g_ep_config(usb_id, CUSTOM_HID_EP_IN | USB_DIR_IN, USB_ENDPOINT_XFER_INT, 0, custom_hid_ep_in_dma[usb_id], MAXP_SIZE_CUSTOM_HIDIN);
+    usb_g_set_intr_hander(usb_id, CUSTOM_HID_EP_IN | USB_DIR_IN, custom_hid_intrtx);
     usb_g_ep_config(usb_id, CUSTOM_HID_EP_OUT, USB_ENDPOINT_XFER_INT, 1, custom_hid_ep_out_dma[usb_id], MAXP_SIZE_CUSTOM_HIDOUT);
     usb_g_set_intr_hander(usb_id, CUSTOM_HID_EP_OUT, custom_hid_rx_data);
     usb_enable_ep(usb_id, CUSTOM_HID_EP_OUT);

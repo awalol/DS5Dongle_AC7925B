@@ -23,7 +23,7 @@ void ds5_hid_input_report(const u8* packet, u16 size)
     (void)packet;
     (void)size;
 
-    /*static u32 start_ms;
+    static u32 start_ms;
     static u32 packets;
     static bool initialized;
     const u32 log_interval_ms = 1000; // 输出间隔，单位 ms
@@ -50,7 +50,7 @@ void ds5_hid_input_report(const u8* packet, u16 size)
 
         start_ms = now_ms;
         packets = 0;
-    }*/
+    }
 
     ds5_report_state_update(packet + 3,63);
 }

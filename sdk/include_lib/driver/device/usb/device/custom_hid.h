@@ -5,7 +5,10 @@
 #include "asm/usb.h"
 
 u32 custom_hid_tx_data(const usb_dev usb_id, const u8* buffer, u32 len);
+/* HID configured and IN endpoint idle. */
 int custom_hid_get_ready(const usb_dev usb_id);
+/* Called in the IN endpoint interrupt. */
+void custom_hid_set_tx_hook(const usb_dev usb_id, void (*tx_hook)(const usb_dev usb_id));
 void custom_hid_set_rx_hook(
     const usb_dev usb_id,
     void* priv,
