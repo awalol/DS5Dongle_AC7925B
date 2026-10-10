@@ -13,8 +13,8 @@
 /* WiFi/BT 共用 2.4 GHz RF 校准配置；关闭 WiFi 时蓝牙控制器仍需要该符号。 */
 #include "wifi/wifi_connect.h"
 const struct wifi_calibration_param wifi_calibration_param = {
-    .xosc_l     = 0x8,// 调节左晶振电容
-    .xosc_r     = 0x8,// 调节右晶振电容
+    .xosc_l     = 0x7,// 调节左晶振电容
+    .xosc_r     = 0x7,// 调节右晶振电容
     .pa_trim_data = {1, 7, 4, 7, 11, 1, 7},// 根据MP测试生成PA TRIM值
     .mcs_dgain    = {
         50,//11B_1M
