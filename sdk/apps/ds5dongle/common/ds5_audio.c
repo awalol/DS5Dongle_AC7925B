@@ -31,7 +31,7 @@
 
 #define HAPTICS_GAIN 2.0f
 
-#define PACKET_MODE 1
+#define PACKET_MODE 2
 
 /* 杰理 SRC 驱动引用的全局配置：完整 SDK 由 sdk/audio/log_config/lib_media_config.c
    提供，本工程没有编译该文件。数值是驱动内部输入缓冲的每通道帧数。*/
@@ -99,9 +99,25 @@ static void ds5_bt_audio_send()
     {
         return;
     }
+    haptics_slot[0].fresh = false;
     haptics_slot[1].fresh = false;
+    speaker_slot[0].fresh = false;
     speaker_slot[1].fresh = false;
-    ds5_report_send_state_speaker_haptics(speaker_slot[1].data, haptics_slot[1].data);
+    switch (PACKET_MODE) {
+        case 1: {
+            ds5_report_send_state_speaker_haptics(speaker_slot[1].data, haptics_slot[1].data);
+            break;
+        }
+        case 2: {
+            ds5_report_send_double_speaker_haptics(
+                speaker_slot[0].data,
+                speaker_slot[1].data,
+                haptics_slot[0].data,
+                haptics_slot[1].data
+                );
+            break;
+        }
+    }
 }
 
 /* 硬件 SRC 的输出回调：在调用 src_base_write / src_base_push_data_out 的任务
@@ -140,6 +156,16 @@ static int haptics_src_output(void* priv, void* data, int len)
                 memcpy(haptics_slot[1].data,haptics_buf,HAPTICS_BUF_SIZE);
                 haptics_slot[1].fresh = true;
                 ds5_bt_audio_send();
+            }
+            if (PACKET_MODE == 2){
+                if (!haptics_slot[0].fresh) {
+                    memcpy(haptics_slot[0].data,haptics_buf,HAPTICS_BUF_SIZE);
+                    haptics_slot[0].fresh = true;
+                }else if (!haptics_slot[1].fresh) {
+                    memcpy(haptics_slot[1].data,haptics_buf, HAPTICS_BUF_SIZE);
+                    haptics_slot[1].fresh = true;
+                    ds5_bt_audio_send();
+                }
             }
         }
     }
@@ -263,6 +289,16 @@ static void ds5_audio_opus_task(void* priv)
             memcpy(speaker_slot[1].data,opus_data,SPEAKER_OPUS_SIZE);
             speaker_slot[1].fresh = true;
             ds5_bt_audio_send();
+        }
+        if (PACKET_MODE == 2){
+            if (!speaker_slot[0].fresh) {
+                memcpy(speaker_slot[0].data,opus_data,SPEAKER_OPUS_SIZE);
+                speaker_slot[0].fresh = true;
+            }else if (!speaker_slot[1].fresh) {
+                memcpy(speaker_slot[1].data,opus_data, SPEAKER_OPUS_SIZE);
+                speaker_slot[1].fresh = true;
+                ds5_bt_audio_send();
+            }
         }
     }
 }
