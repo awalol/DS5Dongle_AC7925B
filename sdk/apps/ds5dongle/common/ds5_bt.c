@@ -23,6 +23,7 @@ void ds5_hid_input_report(const u8* packet, u16 size)
     (void)packet;
     (void)size;
 
+#ifdef ENBALE_POLLING_RATE_TEST
     static u32 start_ms;
     static u32 packets;
     static bool initialized;
@@ -51,6 +52,7 @@ void ds5_hid_input_report(const u8* packet, u16 size)
         start_ms = now_ms;
         packets = 0;
     }
+#endif
 
     ds5_report_state_update(packet + 3,63);
 }

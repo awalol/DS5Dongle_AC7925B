@@ -110,6 +110,17 @@ void ds5_report_send_state(const SetStateData* state)
     bt_hid_interrupt_send(packet,sizeof(packet));
 }
 
+void ds5_report_send_state_raw(const u8 *data, const u8 len)
+{
+    u8 packet[78] = {0};
+    packet[0] = 0x31;
+    packet[1] = reportSeqCounter << 4;
+    reportSeqCounter = (reportSeqCounter + 1) & 0x0F;
+    packet[2] = 0x10;
+    memcpy(packet + 3,data,len);
+    bt_hid_interrupt_send(packet,sizeof(packet));
+}
+
 void ds5_report_send_haptics(const s8* haptics)
 {
     uint8_t pkt[142] = {0};
@@ -205,7 +216,7 @@ void ds5_report_send_double_speaker_haptics(const u8* speaker, const u8* speaker
     pkt[i++] = buf_len; // AudioBufferLength
     pkt[i++] = packetCounter;
     packetCounter += 2;
-    pkt[i++] = 0x13 | 1 << 6 | 1 << 7;
+    pkt[i++] = 0x16 | 1 << 6 | 1 << 7;
     pkt[i++] = 200;
     memcpy(pkt + i, speaker, 200);
     i += 200;
@@ -218,4 +229,8 @@ void ds5_report_send_double_speaker_haptics(const u8* speaker, const u8* speaker
     memcpy(pkt + i, haptics2, 64);
 
     bt_hid_interrupt_send(pkt,sizeof(pkt));
+
+    u8 state[63];
+    ds5_state_copy_volume_state(state,sizeof(state));
+    ds5_report_send_state_raw(state,sizeof(state));
 }

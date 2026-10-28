@@ -23,3 +23,4 @@ section.txt
 /sdk/apps/ds5dongle/board/wl83/objs/btctrler_ds5.a
 version.z
 tmp/
+.idea

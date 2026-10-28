@@ -101,7 +101,7 @@
 #define TCFG_IOKEY_ENABLE                   1
 #define TCFG_IOKEY_INPUT0_ENABLE            1
 #define TCFG_IOKEY_INPUT0_CONNECT_WAY       ONE_PORT_TO_LOW
-#define TCFG_IOKEY_INPUT0_IO                IO_PORTA_14
+#define TCFG_IOKEY_INPUT0_IO                IO_PORTC_09
 #define TCFG_IOKEY_INPUT0_VALUE             KEY_POWER
 #define TCFG_IOKEY_INPUT1_ENABLE            0
 #define TCFG_IOKEY_INPUT1_CONNECT_WAY       ONE_PORT_TO_LOW
@@ -131,7 +131,7 @@
 #define TCFG_LOWPOWER_WAKEUP_PORT0_EDGE     FALLING_EDGE
 #define TCFG_LOWPOWER_WAKEUP_PORT0_FILTER   PORT_FLT_DISABLE
 
-#define TCFG_STATUS_LED_IO                  IO_PORTA_15
+#define TCFG_STATUS_LED_IO                  IO_PORTD_14
 #define TCFG_STATUS_LED_ACTIVE_LEVEL        1
 
 //*********************************************************************************//

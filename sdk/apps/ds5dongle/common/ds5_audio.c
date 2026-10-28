@@ -159,7 +159,7 @@ static int haptics_src_output(void* priv, void* data, int len)
             }
             if (PACKET_MODE == 2){
                 if (!haptics_slot[0].fresh) {
-                    memcpy(haptics_slot[0].data,haptics_buf,HAPTICS_BUF_SIZE);
+                    memcpy(haptics_slot[0].data,haptics_buf, HAPTICS_BUF_SIZE);
                     haptics_slot[0].fresh = true;
                 }else if (!haptics_slot[1].fresh) {
                     memcpy(haptics_slot[1].data,haptics_buf, HAPTICS_BUF_SIZE);

@@ -9,4 +9,7 @@ void bt_hid_control_set(const u8 *data, u16 size);
 void bt_hid_control_get(const u8 reportId);
 void bt_hid_interrupt_send(const u8 *data, u16 size);
 
+/* FM8625H RF 开关控制：0 = 内部天线(RF_INT), 1 = 外部天线(RF_EXT) */
+void switch_ext_rf(int use_external);
+
 #endif

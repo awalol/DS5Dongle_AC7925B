@@ -16,6 +16,7 @@
 #include "hci_event.h"
 #include "ibtstack.h"
 #include "queue.h"
+#include "gpio.h"
 
 #define LOG_TAG             "[AC7925B_BT]"
 #define LOG_ERROR_ENABLE
@@ -34,6 +35,11 @@
 #define MTU_CONTROL                          0xffff
 #define MTU_INTERRUPT                        0xffff
 #define DS5_INQUIRY_LENGTH                   30  /* 30 * 1.28 s */
+
+// FM8625H RF Switch VCTL Pin
+#define RF_SWITCH_VCTL_PIN                   IO_PORTA_14
+#define RF_INT                               0    // 内部天线
+#define RF_EXT                               1    // 外部天线
 
 static bool bt_ready;
 static bool bt_searching;
@@ -417,6 +423,39 @@ static void bt_read_remote_name(u8 status, u8 *addr, u8 *name) {
 }
 
 //*********************************************************************************//
+//                              FM8625H RF 开关控制                                 //
+//*********************************************************************************//
+
+/**
+ * @brief rf_switch_gpio_init - 初始化 RF 开关控制 GPIO
+ */
+static void rf_switch_gpio_init(void) {
+    gpio_set_pull_up(RF_SWITCH_VCTL_PIN, 0);                    // 关闭上拉
+    gpio_set_pull_down(RF_SWITCH_VCTL_PIN, 0);                  // 关闭下拉
+    gpio_set_die(RF_SWITCH_VCTL_PIN, 1);                        // 数字 IO 使能
+    gpio_set_hd(RF_SWITCH_VCTL_PIN, GPIO_DRIVE_STRENGTH_8p0mA); // 设置驱动能力
+    log_info("RF Switch GPIO initialized on IO_PORTA_14");
+}
+
+/**
+ * @brief switch_ext_rf - 切换内部/外部天线
+ * @param use_external: 0 = RF_INT (内部天线), 1 = RF_EXT (外部天线)
+ *
+ * FM8625H VCTL 控制逻辑：
+ * - VCTL = 0: RF信号从 RF_INT1 (pin 1) 输出到 ANT_CTRL (pin 6)
+ * - VCTL = 1: RF信号从 RF_EXT (pin 3) 输出到 ANT_CTRL (pin 6)
+ */
+void switch_ext_rf(int use_external) {
+    if (use_external) {
+        gpio_direction_output(RF_SWITCH_VCTL_PIN, 1);  // 切换到外部天线
+        log_info("RF Switch: External Antenna (RF_EXT)");
+    } else {
+        gpio_direction_output(RF_SWITCH_VCTL_PIN, 0);  // 切换到内部天线
+        log_info("RF Switch: Internal Antenna (RF_INT)");
+    }
+}
+
+//*********************************************************************************//
 //                                   蓝牙初始化                                      //
 //*********************************************************************************//
 
@@ -443,6 +482,10 @@ static int bt_init(void) {
     bt_rf_PA_control_io_remap(TCFG_RF_PA_TX_PORT, TCFG_RF_PA_RX_PORT);
     bt_set_rxtx_status_enable(1);
 #endif
+
+    /* 初始化 FM8625H RF 开关 GPIO 并设置默认使用内部天线 */
+    rf_switch_gpio_init();
+    switch_ext_rf(RF_EXT);
 
     bt_read_remote_name_handle_register(bt_read_remote_name);
     bt_emitter_set_enable_flag(1);
