@@ -15,6 +15,7 @@
 #include "task.h"
 #include "asm/src.h"
 #include "opus.h"
+#include "opus_pi32v2.h"
 
 #define UAC_CBUF_SIZE (1 * 1024)
 #define UAC_CHANNELS 4
@@ -330,6 +331,10 @@ void ds5_audio_init(void)
         src_base_set_output_handler(speaker_src, NULL, speaker_src_output);
         log_info("speaker hw src opened");
     }
+    /* Validate FFT normalization/order and the PI32V2 kernels before codec
+       tasks start. Failed or disabled backends keep the software path. */
+    opus_pi32v2_init();
+    log_info("opus acceleration backends: 0x%x", opus_pi32v2_backends());
     int opus_err = 0;
     opus_enc = opus_encoder_create(48000,2,OPUS_APPLICATION_RESTRICTED_CELT,&opus_err);
     if (opus_err != 0)

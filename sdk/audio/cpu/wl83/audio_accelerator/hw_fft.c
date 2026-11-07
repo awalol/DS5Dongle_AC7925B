@@ -15,6 +15,7 @@
 
 #include "system/includes.h"
 #include "media/hw_fft.h"
+#include "media/hw_fft_f32.h"
 
 // audio_config_set
 const int JL_HW_FFT_V = FFT_EXT;    //FFT硬件版本
@@ -219,6 +220,55 @@ void hw_fft_run(unsigned int fft_config, const int *in, int *out)
     ctx.in = in;
     ctx.out = out;
     hw_fft_wrap(&ctx);
+}
+
+/* Floating-point clients share both the hardware lock and the SRAM workspaces
+ * with the SDK codecs/vector engine. Never take a separate lock for JL_FFT.
+ * Conversion happens in SRAM, so callers need no additional task-stack buffer.
+ */
+int hw_fft_run_f32(unsigned int config, const float *in, float *out,
+                   const short *input_order, float scale, float inverse_scale)
+{
+    unsigned int n = (config >> 16) & 0xfff;
+    unsigned int i;
+    unsigned int timeout = 1000000;
+    if (!in || !out || !n || 2 * n > MAX_FFT_SUPPORT_POINT_NUM ||
+        (config & (BIT(1) | BIT(2)))) {
+        return 0;
+    }
+
+    FFT_ENTER_CRITICAL();
+    for (i = 0; i < n; ++i) {
+        unsigned int source = input_order ? (unsigned short)input_order[i] : i;
+        if (source >= n) {
+            FFT_EXIT_CRITICAL();
+            return 0;
+        }
+        datain[2 * i] = (int)(in[2 * source] * scale);
+        datain[2 * i + 1] = (int)(in[2 * source + 1] * scale);
+    }
+
+    fft_config.fft0_con = config & ~BIT(0);
+    fft_config.fft0_iadr = (unsigned int)datain;
+    fft_config.fft0_oadr = (unsigned int)dataout;
+    JL_FFT->CON = 0;
+    JL_FFT->CON |= BIT(6);
+    JL_FFT->CADR = (unsigned int)&fft_config;
+    JL_FFT->CON = BIT(8) | BIT(0);
+    while (!(JL_FFT->CON & BIT(7))) {
+        if (!--timeout) {
+            JL_FFT->CON = BIT(6);
+            FFT_EXIT_CRITICAL();
+            return 0;
+        }
+    }
+    JL_FFT->CON |= BIT(6);
+
+    for (i = 0; i < 2 * n; ++i) {
+        out[i] = (float)dataout[i] * inverse_scale;
+    }
+    FFT_EXIT_CRITICAL();
+    return 1;
 }
 
 void _fixfft_wrap(pi32v2_hw_fft_ctx *ctx, const int *in, int *out)

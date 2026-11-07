@@ -246,6 +246,7 @@ c_SRC_FILES := \
 	../../../../apps/ds5dongle/common/queue.c \
 	../../../../apps/ds5dongle/common/crc.c \
 	../../../../apps/ds5dongle/common/ds5_audio.c \
+	../../../../audio/cpu/wl83/audio_accelerator/hw_fft.c \
 	../../../../apps/ds5dongle/common/ds5_bt.c \
 	../../../../apps/ds5dongle/common/ds5_hci.c \
 	../../../../apps/ds5dongle/common/ds5_usb.c \
@@ -292,6 +293,7 @@ OPUS_LIB ?= $(ROOT_PREFIX)/lib/opus_jieli/build/lib/libopus.a
 WDL_INCLUDE_DIR ?= $(ROOT_PREFIX)/lib/wdl_jieli/build/_deps/wdl_upstream-src/WDL
 WDL_LIB ?= $(ROOT_PREFIX)/lib/wdl_jieli/build/lib/libwdl_resampler.a
 $(BUILD_DIR)/apps/ds5dongle/common/ds5_audio.c.o: INCLUDES += -I$(OPUS_INCLUDE_DIR)
+$(BUILD_DIR)/apps/ds5dongle/common/ds5_audio.c.o: INCLUDES += -I$(ROOT_PREFIX)/lib/opus_jieli/pi32v2
 $(BUILD_DIR)/apps/ds5dongle/common/wdl_bridge.cpp.o: INCLUDES += -I$(WDL_INCLUDE_DIR)
 $(BUILD_DIR)/apps/ds5dongle/common/wdl_bridge.cpp.o: CXXFLAGS += -fsigned-char
 

@@ -4,6 +4,8 @@ set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_LIST_DIR}/../jieli/JieliCompilePi32v2.
 set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type")
 project(opus_jieli LANGUAGES C)
 
+option(OPUS_JIELI_HW_FFT "AC792 complex FFT with startup validation and software fallback" ON)
+option(OPUS_JIELI_PI32V2_ASM "PI32V2 floating-point dot products and aligned memory kernels" ON)
 # AC792 r3/fprev1: keep the existing floating-point codec and float API.
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
@@ -34,6 +36,10 @@ FetchContent_Declare(opus_upstream
   DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 FetchContent_MakeAvailable(opus_upstream)
+
+include(cmake/OpusPi32v2.cmake)
+opus_add_pi32v2_port(opus "${opus_upstream_SOURCE_DIR}")
+target_include_directories(opus PRIVATE "${JIELI_SDK_ROOT}/include_lib/media")
 
 add_custom_target(install-sdk
   COMMAND "${CMAKE_COMMAND}" -E copy_if_different

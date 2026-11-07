@@ -78,6 +78,9 @@ Make 支持 `BUILD_DIR=build-debug`、`JOBS=4` 和
 - Opus 保留浮点实现和 float API，禁用 x86/ARM intrinsics、桌面程序与测试。
   不启用 fast-math；关闭仅凭编译选项检测无法确认固件运行库支持的
   stack protector 和 fortify，保留上游默认的轻量 hardening。
+  默认启用 AC792 硬件 FFT 和 PI32V2 浮点内积、复制/清零后端，需在启动时调用
+  `opus_pi32v2_init()` 自检后才启用。驱动依赖、选项、软件回退和测试说明见
+  [Opus 后端说明](../opus_jieli/README.md)。
 
 这些 `.a` 包含杰理 LLVM bitcode，最终必须由兼容版本的杰理 `lto-wrapper`
 链接；固件仍需提供 SDK 的 libc/libm 和 C++ 运行库。静态库编译、链接验证不代表
