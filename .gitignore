@@ -24,3 +24,18 @@ section.txt
 version.z
 tmp/
 .idea
+/sdk/cpu/wl83/tools/sdk.elf.*.bc
+/sdk/cpu/wl83/tools/sdk.elf.objs.txt
+/sdk/cpu/wl83/tools/sdk.elf.resolution.txt
+/sdk/cpu/wl83/tools/sdk.map
+
+# Generated linker script and download artifacts
+/sdk/cpu/wl83/sdk.ld
+/sdk/cpu/wl83/tools/isd_config_loader.ini
+/sdk/cpu/wl83/tools/dlog.bin
+/sdk/cpu/wl83/tools/sdk.lst
+/sdk/cpu/wl83/tools/*.fw
+/sdk/cpu/wl83/tools/*.ufw
+
+# Shell crash dumps
+*.stackdump

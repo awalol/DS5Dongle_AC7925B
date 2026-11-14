@@ -463,7 +463,8 @@ static int bt_init(void) {
     queue_init(&interrupt_queue, sizeof(interrupt_element),10);
     queue_init(&control_queue, sizeof(control_element),10);
 
-    bt_max_pwr_set(10, 5, 8, 10);
+    // bt_max_pwr_set(10, 5, 8, 10);
+    bt_max_pwr_set(10, 10, 10, 10);
 
     bt_set_user_ctrl_conn_num(1);
 

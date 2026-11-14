@@ -5,6 +5,12 @@
 #include "device/uart.h"
 #include "device/iic.h"
 #include "asm/includes.h"
+#include "asm/pwm.h"
+#include "system/timer.h"
+
+#if TCFG_STATUS_LED_BREATHE_ENABLE && defined(USE_PWM_TEST_DEMO)
+#error "The status LED breathing test and PWM demo cannot share pwm1"
+#endif
 
 
 // *INDENT-OFF*
@@ -175,7 +181,22 @@ PWM_PLATFORM_DATA_BEGIN(pwm_data1)
         .point_bit          = TCFG_PWM1_DECIMAL_POINT,
     },
 PWM_PLATFORM_DATA_END()
-#endif // TCFG_PWM1_ENABLE
+#elif TCFG_STATUS_LED_BREATHE_ENABLE
+PWM_PLATFORM_DATA_BEGIN(pwm_data1)
+    .timer_pwm_port         = { -1, -1, -1, -1 },
+    .mcpwm_port             = {
+        TCFG_STATUS_LED_IO, -1, -1, -1,
+        -1, -1, -1, -1,
+    },
+    .pwm_config = {
+        .pwm_ch             = PWMCH0_H,
+        .freq               = TCFG_STATUS_LED_PWM_FREQUENCY,
+        .duty               = TCFG_STATUS_LED_ACTIVE_LEVEL ? 0 : 100,
+        .point_bit          = 2,
+    },
+    .hd_level               = GPIO_DRIVE_STRENGTH_24p0mA,
+PWM_PLATFORM_DATA_END()
+#endif
 
 
 #if TCFG_RTC_ENABLE
@@ -375,7 +396,7 @@ REGISTER_DEVICES(device_table) = {
     { "iic2",  &iic_dev_ops, (void *)&sw_iic2_data },
 #endif
 
-#if TCFG_PWM1_ENABLE
+#if TCFG_PWM1_ENABLE || TCFG_STATUS_LED_BREATHE_ENABLE
     { "pwm1",   &pwm_dev_ops,  (void *)&pwm_data1 },
 #endif
 
@@ -587,15 +608,105 @@ void board_early_init(void)
     devices_init();
 }
 
-static void status_led_init(void)
+#ifdef TCFG_STATUS_LED_IO
+static void status_led_gpio_init(u8 level)
 {
     gpio_set_pull_up(TCFG_STATUS_LED_IO, 0);                    // 0=关闭上拉（写 1 反而是开 10K 上拉）
     gpio_set_pull_down(TCFG_STATUS_LED_IO, 0);                  // 关闭内部下拉
     gpio_set_die(TCFG_STATUS_LED_IO, 1);                        // 数字 IO 使能，输出必须开
-    gpio_direction_output(TCFG_STATUS_LED_IO, TCFG_STATUS_LED_ACTIVE_LEVEL); // 方向+电平一次搞定
+    gpio_direction_output(TCFG_STATUS_LED_IO, level);
     // 若直接驱动 LED 偏暗，再加驱动能力：gpio_set_hd(TCFG_STATUS_LED_IO, GPIO_DRIVE_STRENGTH_8p0mA);
     gpio_set_hd(TCFG_STATUS_LED_IO, GPIO_DRIVE_STRENGTH_24p0mA);
 }
+
+#if TCFG_STATUS_LED_BREATHE_ENABLE
+#define STATUS_LED_BREATHE_HALF_STEPS \
+    (TCFG_STATUS_LED_BREATHE_PERIOD_MS / (2 * TCFG_STATUS_LED_BREATHE_STEP_MS))
+
+#if TCFG_STATUS_LED_BREATHE_STEP_MS < 1 || \
+    TCFG_STATUS_LED_BREATHE_PERIOD_MS < (2 * TCFG_STATUS_LED_BREATHE_STEP_MS) || \
+    TCFG_STATUS_LED_BREATHE_PERIOD_MS % (2 * TCFG_STATUS_LED_BREATHE_STEP_MS) != 0
+#error "The LED breathing period must contain two equal, nonempty ramps"
+#endif
+
+static void *status_led_pwm;
+static u16 status_led_breathe_timer;
+static u32 status_led_breathe_step;
+static pwm_config_t status_led_pwm_config = {
+    .pwm_ch = PWMCH0_H,
+    .point_bit = 2,
+};
+
+static void status_led_breathe_fallback(void)
+{
+    if (status_led_breathe_timer) {
+        sys_timer_del(status_led_breathe_timer);
+        status_led_breathe_timer = 0;
+    }
+    if (status_led_pwm) {
+        dev_ioctl(status_led_pwm, IOCTL_PWM_SET_STOP, (u32)&status_led_pwm_config);
+        dev_close(status_led_pwm);
+        status_led_pwm = NULL;
+    }
+    status_led_gpio_init(TCFG_STATUS_LED_ACTIVE_LEVEL);
+}
+
+static void status_led_breathe_update(void *priv)
+{
+    (void)priv;
+    if (++status_led_breathe_step >= 2 * STATUS_LED_BREATHE_HALF_STEPS) {
+        status_led_breathe_step = 0;
+    }
+
+    u32 level = status_led_breathe_step;
+    if (level > STATUS_LED_BREATHE_HALF_STEPS) {
+        level = 2 * STATUS_LED_BREATHE_HALF_STEPS - level;
+    }
+
+    /* A squared brightness ramp gives finer duty changes near darkness. */
+    float brightness = (float)level / STATUS_LED_BREATHE_HALF_STEPS;
+    float duty = 100.0f * brightness * brightness;
+    status_led_pwm_config.duty = TCFG_STATUS_LED_ACTIVE_LEVEL ? duty : 100.0f - duty;
+    int err = dev_ioctl(status_led_pwm, IOCTL_PWM_SET_DUTY, (u32)&status_led_pwm_config);
+    if (err) {
+        printf("[STATUS_LED] set duty failed: %d; using steady light\n", err);
+        status_led_breathe_fallback();
+    }
+}
+
+static int status_led_breathe_init(void)
+{
+    status_led_pwm = dev_open("pwm1", NULL);
+    if (!status_led_pwm) {
+        puts("[STATUS_LED] open PWM failed; using steady light\n");
+        status_led_breathe_fallback();
+        return 0;
+    }
+
+    /* This SDK requires an explicit RUN after opening the PWM device. */
+    int err = dev_ioctl(status_led_pwm, IOCTL_PWM_SET_RUN, (u32)&status_led_pwm_config);
+    if (err) {
+        printf("[STATUS_LED] start PWM failed: %d; using steady light\n", err);
+        status_led_breathe_fallback();
+        return 0;
+    }
+
+    status_led_breathe_timer = sys_timer_add_to_task("sys_timer", NULL,
+                              status_led_breathe_update, TCFG_STATUS_LED_BREATHE_STEP_MS);
+    if (!status_led_breathe_timer) {
+        puts("[STATUS_LED] create timer failed; using steady light\n");
+        status_led_breathe_fallback();
+        return 0;
+    }
+
+    printf("[STATUS_LED] breathing: %u Hz PWM, %u ms period, %u ms step\n",
+           TCFG_STATUS_LED_PWM_FREQUENCY, TCFG_STATUS_LED_BREATHE_PERIOD_MS,
+           TCFG_STATUS_LED_BREATHE_STEP_MS);
+    return 0;
+}
+late_initcall(status_led_breathe_init);
+#endif
+#endif
 
 void board_init(void)
 {
@@ -612,6 +723,7 @@ void board_init(void)
 #endif
 
 #ifdef TCFG_STATUS_LED_IO
-    status_led_init();
+    status_led_gpio_init(TCFG_STATUS_LED_BREATHE_ENABLE ?
+                         !TCFG_STATUS_LED_ACTIVE_LEVEL : TCFG_STATUS_LED_ACTIVE_LEVEL);
 #endif
 }

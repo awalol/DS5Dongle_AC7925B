@@ -344,7 +344,7 @@ void ds5_audio_init(void)
     opus_encoder_ctl(opus_enc,OPUS_SET_EXPERT_FRAME_DURATION(OPUS_FRAMESIZE_10_MS));
     opus_encoder_ctl(opus_enc,OPUS_SET_BITRATE(200 * 8 * 100));
     opus_encoder_ctl(opus_enc,OPUS_SET_VBR(false));
-    opus_encoder_ctl(opus_enc,OPUS_SET_COMPLEXITY(0)); // max 10 in 320MHz
+    opus_encoder_ctl(opus_enc,OPUS_SET_COMPLEXITY(4)); // max 10 in 320MHz
 
     bool queue_created = queue_init(&spk_pcm_queue, sizeof(pcm_element), SPEAKER_PCM_QUEUE_DEPTH);
     if (!queue_created)

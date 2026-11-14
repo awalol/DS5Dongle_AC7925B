@@ -1,6 +1,16 @@
 
 #include "app_config.h"
 
+// 取消注释即可直接下载 app.bin 到 SDRAM 并运行；注释掉则使用原有下载流程。
+// 也可以在 app_config.h 中定义该宏，或通过编译参数 -D 开启。
+// #define CONFIG_DOWNLOAD_SDRAM_ENABLE
+
+#ifdef CONFIG_DOWNLOAD_SDRAM_ENABLE
+#if defined CONFIG_SFC_ENABLE || defined CONFIG_NO_SDRAM_ENABLE
+#error "SDRAM download requires SDRAM enabled and CONFIG_SFC_ENABLE disabled"
+#endif
+#endif
+
 // *INDENT-OFF*
 #ifdef __SHELL__
 
@@ -148,6 +158,12 @@ else
     echo "app.bin 文件生成失败。" >&2
     exit 11
 fi
+
+#ifdef CONFIG_DOWNLOAD_SDRAM_ENABLE
+echo "Downloading app.bin to SDRAM and starting at 0x18000120..."
+"${ISD_DOWNLOAD}" isd_config.ini -dev wl83 -boot 0x103000 -div1 -wait 300 -tosdram app.bin 0x18000120 -go 0x18000120
+exit $?
+#else
 
 #if defined CONFIG_WIFI_IPC_PROJECT_ENABLE
 UI_RES_PREFIX="ipc_"
@@ -363,6 +379,7 @@ host-client -project ${NICKNAME}$2 -f ${files} $1.elf
 rm download.bat
 rm isd_config.ini
 
+#endif // CONFIG_DOWNLOAD_SDRAM_ENABLE
 #else
 
 @echo off
@@ -399,6 +416,12 @@ copy /b text.bin+dcache_ram_data.bin+video_ram_data.bin+compress.bin app.bin
 #else
 copy /b text.bin+data.bin+dcache_ram_data.bin+video_ram_data.bin+ram0_data.bin app.bin
 #endif
+
+#ifdef CONFIG_DOWNLOAD_SDRAM_ENABLE
+echo Downloading app.bin to SDRAM and starting at 0x18000120...
+isd_download.exe isd_config.ini -dev wl83 -boot 0x103000 -div1 -wait 300 -tosdram app.bin 0x18000120 -go 0x18000120
+exit /b %errorlevel%
+#else
 
 #if defined CONFIG_WIFI_IPC_PROJECT_ENABLE
 set UI_RES_PREFIX=ipc_
@@ -588,6 +611,7 @@ cd ..\
 ::退出当前批处理加返回值(0),才能多个批处理嵌套调用批处理
 exit /b 0
 
+#endif // CONFIG_DOWNLOAD_SDRAM_ENABLE
 #endif
 // *INDENT-ON*
 

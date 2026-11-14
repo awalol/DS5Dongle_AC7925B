@@ -209,14 +209,14 @@ void ds5_report_send_double_speaker_haptics(const u8* speaker, const u8* speaker
     pkt[i++] = 0x11 | 0 << 6 | 1 << 7;
     pkt[i++] = 6;
     pkt[i++] = false ? 0b01111111 : 0b01111110;
-    const u8 buf_len = 48;
+    const u8 buf_len = 40;
     pkt[i++] = buf_len; // VolumeHeadphones - guess but no work
     pkt[i++] = buf_len; // VolumeMic - guess but no work
     pkt[i++] = buf_len; // VolumeSpeaker - guess but no work
     pkt[i++] = buf_len; // AudioBufferLength
     pkt[i++] = packetCounter;
     packetCounter += 2;
-    pkt[i++] = 0x16 | 1 << 6 | 1 << 7;
+    pkt[i++] = 0x13 | 1 << 6 | 1 << 7;
     pkt[i++] = 200;
     memcpy(pkt + i, speaker, 200);
     i += 200;

@@ -77,7 +77,7 @@ CFLAGS := \
 	-Wno-invalid-noreturn \
 	-fno-common \
 	-integrated-as \
-	-Oz \
+	-O2 \
 	-g \
 	-flto \
 	-fallow-pointer-null \

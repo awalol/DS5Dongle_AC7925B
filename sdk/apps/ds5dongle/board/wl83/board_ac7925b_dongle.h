@@ -6,6 +6,7 @@
 // #define CONFIG_SFC_ENABLE
 #define CONFIG_BT_ENABLE
 // #define CONFIG_NO_SDRAM_ENABLE
+// #define CONFIG_DOWNLOAD_SDRAM_ENABLE
 
 
 //*********************************************************************************//
@@ -133,6 +134,10 @@
 
 #define TCFG_STATUS_LED_IO                  IO_PORTD_14
 #define TCFG_STATUS_LED_ACTIVE_LEVEL        1
+#define TCFG_STATUS_LED_BREATHE_ENABLE      1 // 呼吸灯效果测试，置 0 恢复常亮
+#define TCFG_STATUS_LED_PWM_FREQUENCY       2000
+#define TCFG_STATUS_LED_BREATHE_PERIOD_MS   3000
+#define TCFG_STATUS_LED_BREATHE_STEP_MS     20
 
 //*********************************************************************************//
 //                                  USB配置                                        //
