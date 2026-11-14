@@ -1,0 +1,60 @@
+AC7925B proprietary 2.4 GHz investigation evidence
+Date: 2026-11-10 (Asia/Shanghai)
+
+Base archive: C:\Users\awalol\Code\DS5Dongle_AC7925B\sdk\cpu\wl83\liba\btctrler.a
+SHA256: db5a35e85a22dc0cc0c3217ca7a5a3742a0a5a65cc9adb0b50ca16f01f8debb9
+Active derived archive: C:\Users\awalol\Code\DS5Dongle_AC7925B\sdk\apps\ds5dongle\board\wl83\objs\btctrler_ds5_scanlog0.a
+SHA256: d3438eb991cc3cd0708188c3631a6d48b1d7bad70f752c524f0257d543102b65
+Archive member entries: 175; unique names: 168; 174 bitcode entries inspected, including all duplicate occurrences.
+Remaining native member version.z.o contains version data and no text code.
+Native version tag: BTCTRLER-$587dd82c2
+
+Root liba archives checked with llvm-nm: 77
+Matching symbols across those archives:
+sdk\cpu\wl83\liba\btctrler.a:RF.c.o: -------- D config_24g_hackable_coded
+
+FUNCTION rf_set_24g_hackable_coded; member RF.c.o.ll; generated IR line 61
+define void @rf_set_24g_hackable_coded(i32 %0) local_unnamed_addr #1 section ".bt_rf.text" !dbg !225 {
+  store i32 %0, ptr @config_24g_hackable_coded, align 4, !dbg !231, !tbaa !232
+  ret void, !dbg !236
+}
+
+FUNCTION rf_mdm_con_ble_sync_word; member hw_bt_api.c.o.ll; generated IR line 1062
+define void @rf_mdm_con_ble_sync_word(i32 %0) local_unnamed_addr #7 section ".bt_rf.text" !dbg !700 {
+  ret void, !dbg !704
+}
+
+FUNCTION ll_set_private_access_addr_pair_channel; member link_layer.c.o.ll; generated IR line 5509
+define void @ll_set_private_access_addr_pair_channel(i32 %0) local_unnamed_addr #0 section ".ble_ll.text" {
+  tail call void @bb_le_access_addr_set(i32 %0) #13
+  ret void
+}
+
+FUNCTION bb_le_access_addr_set; member bb_le_adv.c.o.ll; generated IR line 877
+define void @bb_le_access_addr_set(i32 %0) local_unnamed_addr #0 section ".ble_rf.text" !dbg !1576 {
+  %2 = load ptr, ptr @bb_hdl, align 4, !dbg !1582, !tbaa !947
+  %3 = getelementptr inbounds %struct.ble_baseband_layer_handle, ptr %2, i32 0, i32 2, !dbg !1583
+  store i32 %0, ptr %3, align 4, !dbg !1584, !tbaa !1251
+  ret void, !dbg !1585
+}
+
+FUNCTION __set_fixed_channel_index; member bb_le_regs.c.o.ll; generated IR line 411
+define void @__set_fixed_channel_index(i8 zeroext %0, i8 zeroext %1) local_unnamed_addr #0 section ".ble_rf.text" !dbg !1223 {
+  %3 = zext i8 %1 to i32, !dbg !1229
+  %4 = or i32 %3, 8192, !dbg !1230
+  tail call void @__set_ble_anchor_con(i8 zeroext %0, i8 zeroext 6, i32 %4) #5, !dbg !1231
+  ret void, !dbg !1232
+}
+
+All occurrences of config_24g_hackable_coded in decoded controller members:
+RF.c.o.ll:9:@config_24g_hackable_coded = local_unnamed_addr global i32 0, section ".bt_rf.data", align 4, !dbg !0
+RF.c.o.ll:63:  store i32 %0, ptr @config_24g_hackable_coded, align 4, !dbg !231, !tbaa !232
+RF.c.o.ll:793:!1 = distinct !DIGlobalVariable(name: "config_24g_hackable_coded", scope: !2, file: !3, line: 141, type: !132, isLocal: false, isDefinition: true)
+
+Observed advertising register writes in le_hw_advertising:
+BDADDR0 = 0xBED6; BDADDR1 = 0x8E89 (default access address 0x8E89BED6).
+If bb_hdl private access_addr is nonzero, these two fields are replaced with its low/high 16 bits.
+CRCWORD0 = 0x5555; CRCWORD1 = 0x0055 (BLE advertising CRC init 0x555555).
+These observations do not establish the existence or absence of a hardware CRC polynomial / packet format override.
+
+The four inspected RF/LL/advertising member bytecodes in the active derived archive exactly match the base archive.

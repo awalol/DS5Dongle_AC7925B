@@ -1,0 +1,267 @@
+IPPIPPIPPIPPIPP
+[00:01:09.133][Info]: [SETUP]uart_rx_data 1:
+
+49 
+[00:01:09.139][Info]: [BT]searching for DualSense
+IPPIPPIPPIPPIPP
+[00:01:09.426][Info]: [BT]inquiry: JL-AC79XX-83A1, class 0x254c, rssi -37
+
+1C 27 19 7B 83 A1 
+IPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPPIPP
+[00:01:15.181][Info]: [BT]inquiry: DualSense Wireless Controller, class 0x2508, rssi -35
+
+EC 38 E4 9A 3A 14 
+I
+[00:01:15.192][Info]: [BT]DualSense found, start Classic connection
+[00:01:15.199]Inquiry cancel,start connect
+
+EC 38 E4 9A 3A 14 
+[00:01:15.206]<BT-log> :HCI_EVENT_INQUIRY_COMPLETE=0x0
+
+P
+[00:01:15.212] --- create add:
+[00:01:15.215][Info]: [BT]HCI event=0x1 value=0x1
+
+EC 38 E4 9A 3A 14 
+P
+[00:01:15.224][Info]: [BT]HCI_EVENT_INQUIRY_COMPLETE: 0x1
+[00:01:15.230][Info]: [LMP]HCI_WRITE_SCAN_ENABLE : 2
+[00:01:15.235][L2C-info] :hci_create_connection EC:38:E4:9A:3A:14
+[00:01:15.242][Info]: [LMP]HCI_WRITE_SCAN_ENABLE : 0
+[00:01:15.248][Info]: [LMP]HCI_CREATE_CONNECTION
+
+[00:01:15.273]link_page_enable 0
+
+81 32 73 A4 E5 C6 
+
+EC 38 E4 9A 3A 14 
+C123
+[00:01:15.292][Info]: [LMP]LMP_TX_FEATURES_REQ
+[00:01:15.301][Info]: [LMP]LMP_FEATURES_RES
+[00:01:15.305][Info]: [LMP]LMP_TX_VERSION_REQ
+[00:01:15.313][Info]: [LMP]LMP_VERSION_RES
+[00:01:15.318][Info]: [LMP]LMP_TX_FEATURES_REQ_EXT
+[00:01:15.326][Info]: [LMP]LMP_FEATURES_RES_EXT
+[00:01:15.330][Info]: [LMP]LMP_TX_CONNECTION_REQ
+[00:01:15.338][Info]: [LMP]LMP_ACCEPTED
+[00:01:15.342][Info]: [LMP]LMP_HOST_CONNECTION_REQ
+[00:01:15.347]<BT-log> : HCI_EVENT_VENDOR_SETUP_COMPLETE 
+[00:01:15.353][Info]: [LMP]emitter_or_receiver 1
+
+[00:01:15.358][Info]: [LMP]LMP_TX_SUPERVISION_TIMEOUT
+[00:01:15.364][Info]: [LMP]LMP_TX_TIMING_ACCURACY
+[00:01:15.369][Info]: [LMP]LMP_SETUP_COMPLET
+[00:01:15.378][L2C-info] :waiting authentication
+[00:01:15.383][Info]: [LMP]LMP_TX_MAX_SLOT
+[00:01:15.388]LINK_TYPE_acl_connect
+[00:01:15.392][Info]: [LMP]LMP_TX_MAX_SLOT_REQ
+[00:01:15.397] --- create add:
+[00:01:15.400][Info]: [LMP]LMP_INCR_POWER_REQ
+
+EC 38 E4 9A 3A 14 
+[00:01:15.408][Info]: [LMP]LMP_TX_MAX_POWER
+
+[00:01:15.413]<BT-log> :updata mac --- 
+[00:01:15.417][Info]: [LMP]LMP_TIMING_ACCURACY_REQ
+
+EC 38 E4 9A 3A 14 
+[00:01:15.425][Info]: [LMP]LMP_VERSION_REQ
+[00:01:15.429][Info]: [BT]HCI event=0x3 value=0x0
+[00:01:15.435][Info]: [LMP]LMP_NAME_RES
+[00:01:15.439][Info]: [BT]HCI_EVENT_CONNECTION_COMPLETE: 0x0
+[00:01:15.446][Info]: [LMP]LMP_TIMING_ACCURACY_RES
+[00:01:15.451][Info]: [LMP]LMP_ACCEPTED
+[00:01:15.455][Info]: [LMP]LMP_MAX_SLOT_REQ
+[00:01:15.460][Info]: [LMP]LMP_TX_PACKET_TYPE_TABLE_REQ
+[00:01:15.466][Info]: [LMP]LMP_FEATURES_REQ
+[00:01:15.471][Info]: [LMP]LMP_TX_HCI_EVENT_LINK_KEY_REQ
+[00:01:15.478][Info]: [LMP]LMP_NAME_RES
+[00:01:15.483][Info]: [LMP]E4_LMP_ACCEPTED_EXT
+[00:01:15.488][Info]: [LMP]LMP_PACKET_TYPE_TABLE_REQ
+[00:01:15.494][Info]: [LMP]LMP_FEATURES_REQ_EXT
+[00:01:15.499][Info]: [LMP]LMP_NAME_RES
+[00:01:15.503][Info]: [LMP]REMOTE_NAME : DualSense Wireless Controller
+[00:01:15.510][Info]: [BT]remote name: DualSense Wireless Controller
+[00:01:15.517][Info]: [LMP]LMP_TX_AU_RAND
+
+EC 38 E4 9A 3A 14 
+[00:01:15.524]task: btencry, tcb @ 0x415c34
+[00:01:15.529]create_task btencry : stack:(0x404400,0x404bfc)
+[00:01:15.539][Info]: [LMP]LMP_MAX_SLOT_REQ
+[00:01:15.544][Info]: [LMP]LMP_SRES
+[00:01:15.548]task: btencry, tcb @ 0x415bb0
+[00:01:15.553]create_task btencry : stack:(0x404400,0x404bfc)
+[00:01:15.563][Info]: [LMP]LMP_WAIT_SRES
+[00:01:15.567]<BT-log> :AUTHENTICATION_COMPLETE: 0
+
+[00:01:15.573][L2C-info] :L2CAP_STATE_WILL_SEND_CONNECTION_REQUEST
+[00:01:15.579][Info]: [LMP]LMP_TX_ENCRYPTION_MODE_REQ
+[00:01:15.595] L2CAP_CID_SIGNALING 
+[00:01:15.599][Info]: [LMP]LMP_ACCEPTED
+[00:01:15.604][L2C-info] :L2CAP signaling handler code 11, state 5
+
+[00:01:15.610][Info]: [LMP]LMP_ENCRYPTION_MODE_REQ
+[00:01:15.616][Info]: [LMP]LMP_TX_ENCRYPTION_KEY_SIZE_REQ
+[00:01:15.622][Info]: [LMP]LMP_WAIT_ACCEPT_ENCRYPTION_KEY_SIZE_REQ 0 0 0
+
+[00:01:15.630][Info]: [LMP]LMP_ACCEPTED
+[00:01:15.634][Info]: [LMP]LMP_ENCRYPTION_KEY_SIZE_REQ
+[00:01:15.640][Info]: [LMP]LMP_WAIT_ACCEPT_ENCRYPTION_KEY_SIZE_REQ 6 20 0
+
+[00:01:15.648][Info]: [LMP]LMP_TX_START_ENCRYPTION_REQ
+[00:01:15.653]task: btencry, tcb @ 0x415b98
+[00:01:15.658]create_task btencry : stack:(0x404400,0x404bfc)
+[00:01:15.667]prob_enc
+[00:01:15.673][Info]: [LMP]LMP_ACCEPTED
+[00:01:15.677][Info]: [LMP]LMP_START_ENCRYPTION_REQ
+[00:01:15.682][Info]: [LMP]star_tx_inc
+
+[00:01:15.687]<BT-log> : HCI_EVENT_VENDOR_ENCRY_COMPLETE 
+[00:01:15.693][Info]: [LMP]LMP_AU_RAND
+[00:01:15.697][Info]: [BT]BT_STATUS_ENCRY_COMPLETE
+[00:01:15.703]task: btencry, tcb @ 0x415c20
+[00:01:15.708][L2C-info] :L2CAP_STATE_WILL_SEND_CONNECTION_REQUEST
+[00:01:15.714]create_task btencry : stack:(0x404400,0x404bfc)
+[00:01:15.721][Info]: [BT]opening HID Control, waiting for channel-opened event
+[00:01:15.729][Info]: [LMP]send_sres_now : 10, 0
+[00:01:15.735] L2CAP_CID_SIGNALING 
+[00:01:15.738][L2C-info] :L2CAP signaling handler code 3, state 6
+
+[00:01:15.745] L2CAP_CID_SIGNALING 
+[00:01:15.750][Info]: [LMP]LMP_PAUSE_ENCRYPTION_REQ
+[00:01:15.755][L2C-info] :L2CAP signaling handler code 3, state 6
+
+[00:01:15.763][Info]: [LMP]step 0
+[00:01:15.767][L2C-info] :L2CAP_STATE_CONFIG
+[00:01:15.772][Info]: [LMP]LMP_TX_STOP_ENCRYPTION_REQ
+[00:01:15.777][L2C-info] :send config request
+[00:01:15.782]prob_enc
+[00:01:15.785][Info]: [LMP]LMP_ACCEPTED
+[00:01:15.789][L2C-info] :L2CAP_STATE_CONFIG
+[00:01:15.794][Info]: [LMP]LMP_STOP_ENCRYPTION_REQ
+[00:01:15.800][L2C-info] :L2CAP_STATE_CONFIG
+[00:01:15.805][Info]: [LMP]LMP_RESUME_ENCRYPTIONG_REQ
+[00:01:15.810] L2CAP_CID_SIGNALING 
+[00:01:15.814]prob_enc
+[00:01:15.817]task: btencry, tcb @ 0x415c58
+[00:01:15.821][L2C-info] :L2CAP signaling handler code 11, state 5
+
+[00:01:15.829]create_task btencry : stack:(0x404400,0x404bfc)
+[00:01:15.835][L2C-info] :L2CAP_STATE_CONFIG
+V
+[00:01:15.841][Info]: [LMP]LMP_EVENT_TX_POWER
+[00:01:15.846][L2C-info] :L2CAP_STATE_CONFIG
+[00:01:15.850][Info]: [LMP]LMP_ACCEPTED
+[00:01:15.855][Info]: [LMP]LMP_START_ENCRYPTION_REQ
+[00:01:15.860]<BT-log> : HCI_EVENT_VENDOR_ENCRY_COMPLETE 
+[00:01:15.868][Info]: [LMP]LMP_MAX_POWER
+[00:01:15.872] L2CAP_CID_SIGNALING 
+[00:01:15.877][Info]: [BT]BT_STATUS_ENCRY_COMPLETE
+[00:01:15.882][L2C-info] :L2CAP signaling handler code 5, state 7
+
+[00:01:15.889][L2C-info] :L2CAP_STATE_CONFIG
+[00:01:15.894] L2CAP_CID_SIGNALING 
+[00:01:15.898][L2C-info] :L2CAP signaling handler code 4, state 7
+
+[00:01:15.905][L2C-info] :l2cap cid 64, hint 0, type 1
+[00:01:15.911][L2C-info] :L2CAP_STATE_CONFIG
+[00:01:15.915][L2C-info] :rsp_mtu
+[00:01:15.919][L2C-info] :L2CAP_EVENT_CHANNEL_OPENED status 0x0 addr EC:38:E4:9A:3A:14 handle 0x30 psm 0x1 local_cid 0x40 remote_cid 0x40 local_mtu 672, remote_mtu 672
+
+[00:01:15.937]<BT-log> :====sdp_response_size 22
+
+[00:01:15.942][L2C-info] :l2cap_send_internal cid 0x40, handle 48 
+
+[00:01:15.950] L2CAP_CID_SIGNALING 
+[00:01:15.954][L2C-info] :L2CAP signaling handler code 3, state 6
+
+[00:01:15.962] L2CAP_CID_SIGNALING 
+[00:01:15.965][L2C-info] :L2CAP signaling handler code 3, state 6
+
+[00:01:15.973][L2C-info] :L2CAP_STATE_CONFIG
+[00:01:15.977][L2C-info] :send config request
+[00:01:15.983][L2C-info] :L2CAP_STATE_CONFIG
+[00:01:15.989][L2C-info] :L2CAP_STATE_CONFIG
+[00:01:15.993]<BT-log> :other company id 54c
+[00:01:16.000]<BT-log> :====sdp_response_size 23
+
+[00:01:16.005][L2C-info] :l2cap_send_internal cid 0x40, handle 48 
+
+[00:01:16.012]<BT-log> :getting UUID_L2CAP info
+[00:01:16.018][L2C-info] :L2CAP_STATE_CONFIG
+[00:01:16.023][L2C-info] :L2CAP_STATE_CONFIG
+[00:01:16.027] L2CAP_CID_SIGNALING 
+[00:01:16.031][L2C-info] :L2CAP signaling handler code 5, state 7
+
+[00:01:16.038][L2C-info] :L2CAP_STATE_CONFIG
+[00:01:16.043] L2CAP_CID_SIGNALING 
+[00:01:16.047][L2C-info] :L2CAP signaling handler code 4, state 7
+
+[00:01:16.054][L2C-info] :l2cap cid 65, hint 0, type 1
+[00:01:16.060][L2C-info] :L2CAP_STATE_CONFIG
+[00:01:16.064][L2C-info] :rsp_mtu
+[00:01:16.068][L2C-info] :L2CAP_EVENT_CHANNEL_OPENED status 0x0 addr EC:38:E4:9A:3A:14 handle 0x30 psm 0x11 local_cid 0x41 remote_cid 0x41 local_mtu 672, remote_mtu 672
+
+[00:01:16.086][Info]: [BT]L2CAP opened: size=21 psm=0x11 status=0x0 cid=0x41
+[00:01:16.094][Info]: [BT]HID Control opened cid=0x0041
+[00:01:16.099][Info]: [BT]Remote Control MTU: 672
+[00:01:16.105][Info]: [BT][L2CAP] Opening interrupt channel
+[00:01:16.111][L2C-info] :L2CAP_STATE_WILL_SEND_CONNECTION_REQUEST
+[00:01:16.119]sdp info len end===61===:58
+[00:01:16.124]<BT-log> :enter here 3 3
+
+[00:01:16.128]<BT-log> :enter here 3 6
+
+[00:01:16.132]<BT-log> :enter here 3 35
+
+[00:01:16.136]<BT-log> :get rfcomm id 0
+[00:01:16.140]<BT-log> :pending channel 0
+
+[00:01:16.144]L2CAP_STATE_WILL_SEND_DISCONNECT_REQUEST
+[00:01:16.151]<BT-log> :getting UUID_L2CAP info
+[00:01:16.157] L2CAP_CID_SIGNALING 
+[00:01:16.161][L2C-info] :L2CAP signaling handler code 11, state 5
+
+[00:01:16.168] L2CAP_CID_SIGNALING 
+[00:01:16.173][L2C-info] :L2CAP signaling handler code 7, state 9
+
+[00:01:16.180][L2C-info] :L2CAP_EVENT_CHANNEL_CLOSED local_cid 0x40
+
+[00:01:16.188] L2CAP_CID_SIGNALING 
+[00:01:16.192][L2C-info] :L2CAP signaling handler code 3, state 6
+
+[00:01:16.200] L2CAP_CID_SIGNALING 
+[00:01:16.203][L2C-info] :L2CAP signaling handler code 3, state 6
+
+[00:01:16.210][L2C-info] :L2CAP_STATE_CONFIG
+[00:01:16.214][L2C-info] :send config request
+[00:01:16.221][L2C-info] :L2CAP_STATE_CONFIG
+[00:01:16.226] L2CAP_CID_SIGNALING 
+[00:01:16.230][L2C-info] :L2CAP signaling handler code 5, state 7
+
+[00:01:16.237][L2C-info] :L2CAP_STATE_CONFIG
+[00:01:16.242] L2CAP_CID_SIGNALING 
+[00:01:16.246][L2C-info] :L2CAP signaling handler code 4, state 7
+
+[00:01:16.253][L2C-info] :l2cap cid 66, hint 0, type 1
+[00:01:16.259][L2C-info] :L2CAP_STATE_CONFIG
+[00:01:16.264][L2C-info] :rsp_mtu
+[00:01:16.268][L2C-info] :L2CAP_EVENT_CHANNEL_OPENED status 0x0 addr EC:38:E4:9A:3A:14 handle 0x30 psm 0x13 local_cid 0x42 remote_cid 0x42 local_mtu 672, remote_mtu 672
+
+[00:01:16.285][Info]: [BT]L2CAP opened: size=21 psm=0x13 status=0x0 cid=0x42
+[00:01:16.295][Info]: [BT]HID Interrupt opened cid=0x0042
+[00:01:17.301][Info]: [BT]HID Interrupt RX: packets=597, interval=1000 ms, rate=597.0 Hz
+[00:01:18.301][Info]: [BT]HID Interrupt RX: packets=688, interval=1000 ms, rate=688.0 Hz
+[00:01:19.300][Info]: [BT]HID Interrupt RX: packets=700, interval=1000 ms, rate=700.0 Hz
+[00:01:20.301][Info]: [BT]HID Interrupt RX: packets=741, interval=1000 ms, rate=741.0 Hz
+[00:01:21.301][Info]: [BT]HID Interrupt RX: packets=748, interval=1000 ms, rate=748.0 Hz
+[00:01:22.301][Info]: [BT]HID Interrupt RX: packets=728, interval=1000 ms, rate=728.0 Hz
+[00:01:23.301][Info]: [BT]HID Interrupt RX: packets=757, interval=1000 ms, rate=757.0 Hz
+[00:01:24.301][Info]: [BT]HID Interrupt RX: packets=766, interval=1000 ms, rate=766.0 Hz
+[00:01:25.300][Info]: [BT]HID Interrupt RX: packets=736, interval=1000 ms, rate=736.0 Hz
+[00:01:26.301][Info]: [BT]HID Interrupt RX: packets=739, interval=1000 ms, rate=739.0 Hz
+[00:01:26.515][Info]: [SETUP]uart_rx_data 3:
+
+1B 5B 42 
+[00:01:27.304][Info]: [BT]HID Interrupt RX: packets=684, interval=1000 ms, rate=684.0 Hz
+[00:01:28.300][Info]: [BT]HID Interrupt RX: packets=730, interval=1000 ms, rate=730.0 Hz

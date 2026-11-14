@@ -1,0 +1,520 @@
+AC792 vendor Opus static inspection evidence
+Inspection date: 2026-11-07
+Tools: C:/JL/pi32/bin/{llvm-ar.exe,llvm-nm.exe,clang.exe}
+IR decode flags: --target=pi32v2 -mcpu=r3 -mfprev1 -S -emit-llvm -x ir
+No target code executed. Debug metadata is omitted from excerpts.
+
+LIBRARY vendor_enc
+PATH sdk/cpu/wl83/liba/media/lib_opus_enc.a
+BYTES 1076866
+SHA256 cd55df4b78f9452356e4d8edd16d4dd7244501687da375e11725c4241f957faf
+ARCHIVE_MEMBERS 51
+UNRESOLVED_AFTER_SUBTRACTING_ARCHIVE_DEFINITIONS JL_HW_FFT_V OPUS_LONGFRAME_ENABLE _FFT_wrap_ abs hw_fft_config hw_fft_run memcpy memmove memset
+SELECTED_EXPORTS get_opus_enc_ops get_opus_stenc_ops opus_encoder_ctl opus_encoder_init
+
+LIBRARY vendor_dec
+PATH sdk/cpu/wl83/liba/media/lib_ogg_opus_dec.a
+BYTES 961022
+SHA256 bc88e8ceddc8b1a766c2e0b7585589c7171a3fc0e81e6ed4f9d947aa1273d930
+ARCHIVE_MEMBERS 69
+UNRESOLVED_AFTER_SUBTRACTING_ARCHIVE_DEFINITIONS JL_HW_FFT_V hw_fft_run
+SELECTED_EXPORTS 
+
+LIBRARY sdk_libopus
+PATH sdk/cpu/wl83/liba/libopus.a
+BYTES 426874
+SHA256 958565b41e90c751d9e1237b63800b85183e23465ce63ba1e8abdf5455d338c5
+ARCHIVE_MEMBERS 137
+UNRESOLVED_AFTER_SUBTRACTING_ARCHIVE_DEFINITIONS __adddf3 __divdf3 __extendsfdf2 __fixdfsi __floatsidf __gtdf2 __ledf2 __ltdf2 __muldf3 __stack_chk_fail __stack_chk_guard __subdf3 __truncdfsf2 _impure_ptr abort acos cos exp exp2 floor fprintf free log log10 lrintf malloc memcpy memmove memset sqrt sqrtf
+SELECTED_EXPORTS opus_encode opus_encode_float opus_encoder_create opus_encoder_ctl opus_encoder_init
+
+LIBRARY project_opus
+PATH sdk/lib/opus_jieli/build/lib/libopus.a
+BYTES 2434964
+SHA256 304e939c7bf607a94e1784c76ca466d2ab80a92417d0e18b454b06fab5ef49a7
+ARCHIVE_MEMBERS 137
+UNRESOLVED_AFTER_SUBTRACTING_ARCHIVE_DEFINITIONS _impure_ptr abort acos cos exp fabsf floor floorf fprintf free log log10 lrintf malloc sqrt sqrtf
+SELECTED_EXPORTS opus_encode opus_encode_float opus_encoder_create opus_encoder_ctl opus_encoder_init
+
+EXCERPT vendor_enc/mdct.o_pi32v2.ll
+    6: %struct._CELT_OpusEncoder_ = type { i8*, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [4 x i32], i32, i32, i32, i32, i32, i32, i8*, %struct._OPUS_EN_FILE_IO_, %struct.hw_fft_ext_v2_cfg* (%struct.hw_fft_ext_v2_cfg*, i32, i32, i32, i32, i32, float)*, i32 (i32, i32*, i32*)*, %struct.hw_fft_ext_v2_cfg, i32, i32, i32, i32, %struct.CELT_OGGPage_m_, [130 x i32], [728 x i8] }
+    7: %struct._OPUS_EN_FILE_IO_ = type { i8*, i16 (i8*, i16*, i8, i16)*, i32 (i8*, i8*, i16)* }
+    8: %struct.hw_fft_ext_v2_cfg = type { i32, i32, float }
+    9: %struct.CELT_OGGPage_m_ = type { [4 x i8], i8, i8, [8 x i8], [4 x i8], [4 x i8], [4 x i8], i8, [528 x i8], i32, i32, i32, i32, i64 }
+   10: %struct.mdct_lookup = type { i32, i32, [4 x %struct.kiss_fft_state*], i16* }
+   11: %struct.kiss_fft_state = type { i32, i16, i32, i32, [16 x i16], i16*, %struct.kiss_twiddle_cpx*, %struct.arch_fft_state* }
+   12: %struct.kiss_twiddle_cpx = type { i16, i16 }
+   13: %struct.arch_fft_state = type { i32, i8* }
+   14: %struct.kiss_fft_cpx = type { i32, i32 }
+   15: 
+   16: @fft_config_tab = local_unnamed_addr constant [4 x i32] [i32 31470881, i32 15741969, i32 7877377, i32 3944961], section ".opus_comb_enc.text.cache.L2.const", align 4
+   17: @JL_HW_FFT_V = external local_unnamed_addr constant i32, align 4
+   18: 
+   19: ; Function Attrs: minsize nounwind optsize
+   20: define void @clt_mdct_forward_c(%struct._CELT_OpusEncoder_*, %struct.mdct_lookup* nocapture readonly, i32* nocapture readonly, i32* nocapture, i16* nocapture readonly, i32, i32, i32) local_unnamed_addr #0 section ".opus_comb_enc.text.cache.L2.run" {
+...
+  278: 
+  279: ; <label>:169:                                    ; preds = %125
+  280:   %170 = load i32, i32* @JL_HW_FFT_V, align 4
+  281:   %171 = and i32 %170, -2
+  282:   %172 = icmp eq i32 %171, 4
+  283:   br i1 %172, label %230, label %173
+  284: 
+  285: ; <label>:173:                                    ; preds = %169
+  286:   %174 = sext i16 %16 to i64
+  287:   %175 = shl i32 1, %31
+  288:   %176 = ashr i32 %175, 1
+  289:   %177 = getelementptr inbounds %struct.kiss_fft_state, %struct.kiss_fft_state* %10, i32 0, i32 5
+  290:   br label %178
+  291: 
+...
+  361:   %228 = add nuw nsw i32 %180, 1
+  363:   br label %178
+  364: 
+  365: ; <label>:229:                                    ; preds = %178
+  366:   tail call void @opus_fft_impl(%struct.kiss_fft_state* %10, %struct.kiss_fft_cpx* %106) #3
+  367:   br label %364
+  368: 
+  369: ; <label>:230:                                    ; preds = %169
+  370:   switch i32 %170, label %364 [
+  371:     i32 4, label %235
+  372:     i32 5, label %231
+  373:   ]
+  374: 
+  375: ; <label>:231:                                    ; preds = %230
+  376:   %232 = sext i16 %16 to i64
+  377:   %233 = shl i32 1, %31
+  378:   %234 = ashr i32 %233, 1
+  379:   br label %291
+  380: 
+  381: ; <label>:235:                                    ; preds = %230
+  382:   %236 = sext i16 %16 to i64
+  383:   %237 = add nsw i32 %12, 2
+  384:   %238 = shl i32 1, %237
+  385:   %239 = ashr i32 %238, 1
+  386:   br label %240
+  387: 
+...
+  451:   %285 = getelementptr inbounds %struct.kiss_fft_cpx, %struct.kiss_fft_cpx* %106, i32 %242, i32 1
+  452:   store i32 %283, i32* %285, align 4
+  453:   %286 = add nuw nsw i32 %242, 1
+  455:   br label %240
+  456: 
+  457: ; <label>:287:                                    ; preds = %240
+  458:   %288 = getelementptr inbounds [4 x i32], [4 x i32]* @fft_config_tab, i32 0, i32 %6
+  459:   %289 = load i32, i32* %288, align 4
+  460:   %290 = bitcast i8* %105 to i32*
+  461:   tail call void @hw_fft_run(i32 %289, i32* %290, i32* %290) #3
+  462:   br label %364
+  463: 
+...
+  536:   %340 = getelementptr inbounds %struct._CELT_OpusEncoder_, %struct._CELT_OpusEncoder_* %0, i32 0, i32 25
+  537:   store i32 (i32, i32*, i32*)* @_FFT_wrap_, i32 (i32, i32*, i32*)** %340, align 4
+  539:   %341 = getelementptr inbounds %struct._CELT_OpusEncoder_, %struct._CELT_OpusEncoder_* %0, i32 0, i32 27
+  540:   %342 = load i32, i32* %341, align 4
+  541:   %343 = icmp eq i32 %342, 0
+  542:   br i1 %343, label %346, label %344
+  543: 
+  544: ; <label>:344:                                    ; preds = %338
+  545:   %345 = getelementptr inbounds %struct._CELT_OpusEncoder_, %struct._CELT_OpusEncoder_* %0, i32 0, i32 26
+  546:   br label %358
+  547: 
+  548: ; <label>:346:                                    ; preds = %338
+  549:   %347 = getelementptr inbounds %struct._CELT_OpusEncoder_, %struct._CELT_OpusEncoder_* %0, i32 0, i32 8
+  550:   %348 = load i32, i32* %347, align 4
+  551:   %349 = ashr i32 %348, 1
+  552:   %350 = getelementptr inbounds %struct._CELT_OpusEncoder_, %struct._CELT_OpusEncoder_* %0, i32 0, i32 26
+  554:   %351 = bitcast %struct.hw_fft_ext_v2_cfg* %350 to i8*
+  555:   %352 = tail call i8* @hw_fft_config(i8* %351, i32 %349, i32 1, i32 0, i32 0, i32 1, float 1.000000e+00) #3
+  556:   %353 = bitcast i8* %352 to %struct.hw_fft_ext_v2_cfg*
+  558:   %354 = icmp eq %struct.hw_fft_ext_v2_cfg* %353, %350
+  559:   br i1 %354, label %355, label %409
+  560: 
+  561: ; <label>:355:                                    ; preds = %346
+  562:   %356 = load i32 (i32, i32*, i32*)*, i32 (i32, i32*, i32*)** %340, align 4
+  563:   store i32 1, i32* %341, align 4
+  564:   %357 = icmp eq i32 (i32, i32*, i32*)* %356, null
+  565:   br i1 %357, label %364, label %358
+  566: 
+  567: ; <label>:358:                                    ; preds = %355, %344
+  568:   %359 = phi %struct.hw_fft_ext_v2_cfg* [ %345, %344 ], [ %350, %355 ]
+  569:   %360 = phi i32 (i32, i32*, i32*)* [ @_FFT_wrap_, %344 ], [ %356, %355 ]
+  571:   %361 = ptrtoint %struct.hw_fft_ext_v2_cfg* %359 to i32
+  572:   %362 = bitcast i8* %105 to i32*
+  573:   %363 = tail call i32 %360(i32 %361, i32* %362, i32* %362) #3
+  574:   br label %364
+...
+
+EXCERPT vendor_dec/mdct.o.ll
+    6: %struct.mdct_lookup = type { i32, i32, [4 x %struct.kiss_fft_state*], i16* }
+    7: %struct.kiss_fft_state = type { i32, i16, i32, i32, [16 x i16], i16*, %struct.kiss_twiddle_cpx*, %struct.arch_fft_state* }
+    8: %struct.kiss_twiddle_cpx = type { i16, i16 }
+    9: %struct.arch_fft_state = type { i32, i8* }
+   10: %struct.kiss_fft_cpx = type { i32, i32 }
+   11: 
+   12: @fft_config_tab_dec = local_unnamed_addr constant [4 x i32] [i32 31470881, i32 15741969, i32 7877377, i32 3944961], section ".ogg_opus_dec.text.cache.L2.const", align 4
+   13: @JL_HW_FFT_V = external local_unnamed_addr constant i32, align 4
+   14: 
+   15: ; Function Attrs: minsize nounwind optsize
+   16: define void @clt_mdct_backward_c(%struct.mdct_lookup* nocapture readonly, i32* nocapture readonly, i32* noalias, i16* noalias nocapture readonly, i32, i32, i32) local_unnamed_addr #0 section ".ogg_opus_dec.text.cache.L2.run" {
+...
+   54:   %22 = ashr i32 %14, 2
+   56:   %23 = load i32, i32* @JL_HW_FFT_V, align 4
+   57:   %24 = icmp eq i32 %23, 4
+   58:   %25 = add nsw i32 %17, -1
+   59:   %26 = mul nsw i32 %25, %6
+   60:   %27 = getelementptr inbounds i32, i32* %1, i32 %26
+   61:   %28 = ashr i32 %4, 1
+   62:   %29 = getelementptr inbounds i32, i32* %2, i32 %28
+   63:   br i1 %24, label %30, label %33
+   64: 
+   65: ; <label>:30:                                     ; preds = %21
+   66:   %31 = shl nsw i32 %6, 1
+   67:   %32 = sub i32 0, %31
+   68:   br label %84
+   69: 
+   70: ; <label>:33:                                     ; preds = %21
+...
+  142:   br label %40
+  143: 
+  144: ; <label>:82:                                     ; preds = %40
+  145:   %83 = bitcast i32* %29 to %struct.kiss_fft_cpx*
+  146:   tail call void @opus_fft_impl(%struct.kiss_fft_state* %35, %struct.kiss_fft_cpx* %83) #3
+  147:   br label %125
+  148: 
+...
+  201: ; <label>:122:                                    ; preds = %84
+  203:   %123 = getelementptr inbounds [4 x i32], [4 x i32]* @fft_config_tab_dec, i32 0, i32 %5
+  204:   %124 = load i32, i32* %123, align 4
+  205:   tail call void @hw_fft_run(i32 %124, i32* %29, i32* %29) #3
+  206:   br label %125
+  207: 
+...
+
+EXCERPT vendor_enc/mathops.o_pi32v2.ll
+    6: @C_opus_tab = external local_unnamed_addr constant [5 x i16], align 2
+    7: 
+    8: ; Function Attrs: minsize nounwind optsize readnone
+    9: define signext i16 @celt_rsqrt_norm_opus_com(i32) local_unnamed_addr #0 section ".opus_comb_enc.text.cache.L2.run" {
+   11:   %2 = shl i32 %0, 16
+   12:   %3 = xor i32 %2, -2147483648
+   13:   %4 = ashr exact i32 %3, 16
+   14:   %5 = mul nsw i32 %4, 13426
+   15:   %6 = add i32 %5, -884080640
+   16:   %7 = ashr i32 %6, 16
+   17:   %8 = mul nsw i32 %7, %4
+   18:   %9 = lshr i32 %8, 15
+...
+   45: define i32 @celt_sqrt_opus_com(i32) local_unnamed_addr #0 section ".opus_comb_enc.text.cache.L2.run" {
+   47:   %2 = icmp eq i32 %0, 0
+   48:   br i1 %2, label %55, label %3
+   49: 
+   50: ; <label>:3:                                      ; preds = %1
+   51:   %4 = icmp sgt i32 %0, 1073741823
+   52:   br i1 %4, label %55, label %5
+   53: 
+   54: ; <label>:5:                                      ; preds = %3
+   55:   %6 = tail call fastcc signext i16 @celt_ilog2(i32 %0) #2
+   56:   %7 = sext i16 %6 to i32
+   57:   %8 = ashr i32 %7, 1
+   58:   %9 = add nsw i32 %8, -7
+   60:   %10 = shl nsw i32 %9, 1
+   61:   %11 = icmp sgt i32 %9, 0
+   62:   %12 = ashr i32 %0, %10
+   63:   %13 = sub nsw i32 0, %10
+   64:   %14 = shl i32 %0, %13
+   65:   %15 = select i1 %11, i32 %12, i32 %14
+...
+   90:   %39 = mul nsw i32 %38, %20
+   91:   %40 = lshr i32 %39, 15
+   92:   %41 = add nuw nsw i32 %40, %22
+   93:   %42 = shl i32 %41, 16
+   94:   %43 = ashr exact i32 %42, 16
+   95:   %44 = mul nsw i32 %43, %20
+   96:   %45 = lshr i32 %44, 15
+   97:   %46 = add nuw nsw i32 %45, %17
+   98:   %47 = shl i32 %46, 16
+   99:   %48 = ashr exact i32 %47, 16
+  101:   %49 = sub nsw i32 14, %8
+  102:   %50 = icmp sgt i32 %49, 0
+  103:   %51 = ashr i32 %48, %49
+  104:   %52 = sub nsw i32 0, %49
+  105:   %53 = shl i32 %48, %52
+  106:   %54 = select i1 %50, i32 %51, i32 %53
+  108:   br label %55
+  109: 
+  110: ; <label>:55:                                     ; preds = %5, %3, %1
+  111:   %56 = phi i32 [ %54, %5 ], [ 0, %1 ], [ 32767, %3 ]
+  112:   ret i32 %56
+  113: }
+  114: 
+...
+  125: define signext i16 @celt_cos_norm_opus_com(i32) local_unnamed_addr #0 section ".opus_comb_enc.text.cache.L2.run" {
+  127:   %2 = and i32 %0, 131071
+  129:   %3 = icmp ugt i32 %2, 65536
+  130:   %4 = sub nsw i32 131072, %2
+  132:   %5 = select i1 %3, i32 %4, i32 %2
+  134:   %6 = and i32 %5, 32767
+  135:   %7 = icmp eq i32 %6, 0
+  136:   br i1 %7, label %68, label %8
+  137: 
+  138: ; <label>:8:                                      ; preds = %1
+  139:   %9 = icmp ult i32 %5, 32768
+  140:   br i1 %9, label %10, label %38
+...
+  221: define i32 @celt_rcp_opus_com(i32) local_unnamed_addr #0 section ".opus_comb_enc.text.cache.L2.run" {
+  224:   %2 = tail call fastcc signext i16 @celt_ilog2(i32 %0) #2
+  225:   %3 = sext i16 %2 to i32
+  227:   %4 = add nsw i32 %3, -15
+  228:   %5 = icmp sgt i32 %4, 0
+  229:   %6 = ashr i32 %0, %4
+  230:   %7 = sub nsw i32 15, %3
+  231:   %8 = shl i32 %0, %7
+  232:   %9 = select i1 %5, i32 %6, i32 %8
+  233:   %10 = shl i32 %9, 16
+  234:   %11 = xor i32 %10, -2147483648
+  235:   %12 = ashr exact i32 %11, 16
+  236:   %13 = mul nsw i32 %12, -30840
+  237:   %14 = add i32 %13, 2021130240
+  238:   %15 = ashr i32 %14, 16
+  239:   %16 = mul nsw i32 %15, %12
+...
+
+EXCERPT vendor_enc/opus_stdemo.o_pi32v2.ll
+    6: %struct.__OPUS_STENC_OPS = type { i32 (%struct._OPUS_ENC_PARA_*)*, i32 (i8*, %struct._OPUS_EN_FILE_IO_*, %struct._OPUS_ENC_PARA_*)*, i32 (i8*)*, i32 (i8*, i16*, i16*, i8*, i32*)* }
+    7: %struct._OPUS_ENC_PARA_ = type { i32, i32, i16, i16, i16, i16 }
+    8: %struct._OPUS_EN_FILE_IO_ = type { i8*, i16 (i8*, i16*, i8, i16)*, i32 (i8*, i8*, i16)* }
+    9: %struct._CELT_OpusEncoder_ = type { i8*, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [4 x i32], i32, i32, i32, i32, i32, i32, i8*, %struct._OPUS_EN_FILE_IO_, %struct.hw_fft_ext_v2_cfg* (%struct.hw_fft_ext_v2_cfg*, i32, i32, i32, i32, i32, float)*, i32 (i32, i32*, i32*)*, %struct.hw_fft_ext_v2_cfg, i32, i32, i32, i32, %struct.CELT_OGGPage_m_, [130 x i32], [728 x i8] }
+   10: %struct.hw_fft_ext_v2_cfg = type { i32, i32, float }
+   11: %struct.CELT_OGGPage_m_ = type { [4 x i8], i8, i8, [8 x i8], [4 x i8], [4 x i8], [4 x i8], i8, [528 x i8], i32, i32, i32, i32, i64 }
+   12: 
+   13: @opus_stenc_opst = constant %struct.__OPUS_STENC_OPS { i32 (%struct._OPUS_ENC_PARA_*)* @get_opus_stenc_buf_size, i32 (i8*, %struct._OPUS_EN_FILE_IO_*, %struct._OPUS_ENC_PARA_*)* @opus_stopen, i32 (i8*)* @opus_strun, i32 (i8*, i16*, i16*, i8*, i32*)* @opus_strun_wb }, section ".opus_comb_enc.text.cache.L2.const", align 4
+...
+   43: define i32 @opus_strun_wb(i8*, i16*, i16*, i8*, i32* nocapture) #0 section ".opus_comb_enc.text.cache.L2.run" {
+   49:   %6 = bitcast i8* %0 to %struct._CELT_OpusEncoder_*
+...
+   72:   br i1 %25, label %26, label %33
+   73: 
+   74: ; <label>:26:                                     ; preds = %5
+   75:   %27 = load i32, i32* %16, align 4
+   76:   %28 = getelementptr inbounds i16, i16* %13, i32 %27
+   77:   %29 = bitcast i16* %28 to i8*
+   78:   %30 = bitcast i16* %2 to i8*
+   79:   %31 = shl nsw i32 %27, 1
+   80:   %32 = tail call i8* @memcpy(i8* %29, i8* %30, i32 %31) #4
+   81:   br label %33
+   82: 
+   83: ; <label>:33:                                     ; preds = %26, %5
+   85:   %34 = getelementptr inbounds i8, i8* %0, i32 96
+   86:   %35 = bitcast i8* %34 to i32*
+   87:   %36 = load i32, i32* %35, align 4
+   88:   %37 = icmp eq i32 %36, 1
+   89:   %38 = getelementptr inbounds i8, i8* %3, i32 8
+   91:   %39 = select i1 %37, i8* %38, i8* %3
+   93:   %40 = load i32, i32* %16, align 4
+   94:   %41 = getelementptr inbounds i8, i8* %0, i32 28
+   95:   %42 = bitcast i8* %41 to i32*
+   96:   %43 = load i32, i32* %42, align 4
+   97:   %44 = tail call i32 @opus_encode_native(%struct._CELT_OpusEncoder_* %6, i16* %13, i32 %40, i8* %39, i32 %43, i32 16) #4
+   99:   %45 = getelementptr inbounds i8, i8* %0, i32 24
+  100:   %46 = bitcast i8* %45 to i32*
+  101:   %47 = load i32, i32* %46, align 4
+  102:   %48 = icmp eq i32 %44, %47
+  103:   br i1 %48, label %49, label %61
+  104: 
+  105: ; <label>:49:                                     ; preds = %33
+  106:   store i32 %44, i32* %4, align 4
+  107:   %50 = load i32, i32* %35, align 4
+  108:   %51 = icmp eq i32 %50, 1
+  109:   br i1 %51, label %52, label %61
+  110: 
+  111: ; <label>:52:                                     ; preds = %49
+  112:   tail call fastcc void @int_to_char(i32 %44, i8* %3) #5
+  113:   %53 = getelementptr inbounds i8, i8* %0, i32 84
+  114:   %54 = bitcast i8* %53 to i32*
+  115:   %55 = load i32, i32* %54, align 4
+  116:   %56 = getelementptr inbounds i8, i8* %3, i32 4
+  117:   tail call fastcc void @int_to_char(i32 %55, i8* %56) #5
+  118:   %57 = getelementptr inbounds i8, i8* %0, i32 732
+  119:   %58 = getelementptr inbounds i8, i8* %0, i32 100
+  120:   %59 = bitcast i8* %58 to i8**
+  121:   store i8* %57, i8** %59, align 4
+  122:   %60 = add nsw i32 %44, 8
+  123:   store i32 %60, i32* %4, align 4
+  124:   br label %61
+  125: 
+...
+  159: define internal i32 @get_opus_stenc_buf_size(%struct._OPUS_ENC_PARA_* nocapture readonly) #0 section ".opus_comb_enc.text.cache.L2.run" {
+  161:   %2 = getelementptr inbounds %struct._OPUS_ENC_PARA_, %struct._OPUS_ENC_PARA_* %0, i32 0, i32 0
+  162:   %3 = load i32, i32* %2, align 4
+  165:   switch i32 %3, label %11 [
+  166:     i32 48000, label %4
+  167:     i32 24000, label %4
+  168:     i32 16000, label %4
+  169:     i32 12000, label %4
+  170:     i32 8000, label %4
+  171:   ]
+  172: 
+  173: ; <label>:4:                                      ; preds = %1, %1, %1, %1, %1
+  174:   %5 = getelementptr inbounds %struct._OPUS_ENC_PARA_, %struct._OPUS_ENC_PARA_* %0, i32 0, i32 2
+  175:   %6 = load i16, i16* %5, align 4
+  176:   %7 = add i16 %6, -1
+  177:   %8 = icmp ugt i16 %7, 1
+  178:   br i1 %8, label %11, label %9
+  179: 
+  180: ; <label>:9:                                      ; preds = %4
+  181:   %10 = tail call i32 @opus_encoder_get_size(i32 2) #4
+  183:   br label %11
+  184: 
+  185: ; <label>:11:                                     ; preds = %9, %4, %1
+  186:   %12 = phi i32 [ %10, %9 ], [ 0, %1 ], [ 0, %4 ]
+  187:   ret i32 %12
+  188: }
+  189: 
+  190: ; Function Attrs: minsize nounwind optsize
+...
+  207:     i32 16000, label %10
+  208:     i32 12000, label %10
+  209:     i32 8000, label %10
+  210:   ]
+  211: 
+  212: ; <label>:10:                                     ; preds = %3, %3, %3, %3, %3
+  213:   %11 = add i16 %8, -1
+  214:   %12 = icmp ugt i16 %11, 1
+  215:   br i1 %12, label %97, label %13
+  216: 
+  217: ; <label>:13:                                     ; preds = %10
+  218:   %14 = getelementptr inbounds %struct._OPUS_ENC_PARA_, %struct._OPUS_ENC_PARA_* %2, i32 0, i32 3
+  219:   %15 = load i16, i16* %14, align 2
+  220:   %16 = icmp ugt i16 %15, 2
+  221:   br i1 %16, label %97, label %17
+  222: 
+  223: ; <label>:17:                                     ; preds = %13
+  224:   %18 = getelementptr inbounds %struct._OPUS_ENC_PARA_, %struct._OPUS_ENC_PARA_* %2, i32 0, i32 4
+  225:   %19 = load i16, i16* %18, align 4
+  226:   %20 = icmp ugt i16 %19, 4
+  227:   br i1 %20, label %97, label %21
+  228: 
+  229: ; <label>:21:                                     ; preds = %17
+  230:   %22 = getelementptr inbounds %struct._OPUS_ENC_PARA_, %struct._OPUS_ENC_PARA_* %2, i32 0, i32 5
+  231:   %23 = load i16, i16* %22, align 2
+  232:   switch i16 %23, label %97 [
+  233:     i16 10, label %24
+  234:     i16 20, label %24
+  235:   ]
+  236: 
+  237: ; <label>:24:                                     ; preds = %21, %21
+  238:   %25 = tail call i32 @opus_encoder_get_size(i32 %9) #4
+  239:   %26 = tail call i8* @memset(i8* %0, i32 0, i32 %25) #4
+  240:   %27 = icmp eq %struct._OPUS_EN_FILE_IO_* %1, null
+  241:   br i1 %27, label %43, label %28
+  242: 
+  243: ; <label>:28:                                     ; preds = %24
+  244:   %29 = bitcast %struct._OPUS_EN_FILE_IO_* %1 to i32*
+  245:   %30 = load i32, i32* %29, align 4
+  246:   %31 = getelementptr inbounds i8, i8* %0, i32 104
+  247:   %32 = bitcast i8* %31 to i32*
+  248:   store i32 %30, i32* %32, align 4
+  249:   %33 = getelementptr inbounds %struct._OPUS_EN_FILE_IO_, %struct._OPUS_EN_FILE_IO_* %1, i32 0, i32 1
+  250:   %34 = bitcast i16 (i8*, i16*, i8, i16)** %33 to i32*
+...
+  288:   store i32 %60, i32* %62, align 4
+  289:   %63 = getelementptr inbounds i8, i8* %0, i32 20
+  290:   %64 = bitcast i8* %63 to i32*
+  291:   %65 = load i32, i32* %64, align 4
+  292:   %66 = getelementptr inbounds i8, i8* %0, i32 16
+  293:   %67 = bitcast i8* %66 to i32*
+  294:   %68 = mul nsw i32 %6, 12
+  295:   %69 = sdiv i32 %68, %56
+  297:   %70 = mul nsw i32 %65, 12
+  298:   %71 = sdiv i32 %70, 8
+  299:   %72 = sdiv i32 %69, 2
+  300:   %73 = add nsw i32 %72, %71
+  301:   %74 = sdiv i32 %73, %69
+  302:   %75 = icmp slt i32 %74, 512
+  303:   %76 = select i1 %75, i32 %74, i32 512
+  305:   %77 = shl i32 %69, 3
+  306:   %78 = mul i32 %77, %76
+  307:   %79 = sdiv i32 %78, 12
+  308:   store i32 %79, i32* %67, align 4
+  309:   %80 = icmp sgt i32 %76, 1
+  310:   %81 = select i1 %80, i32 %76, i32 1
+  311:   %82 = getelementptr inbounds i8, i8* %0, i32 24
+  312:   %83 = bitcast i8* %82 to i32*
+  313:   store i32 %81, i32* %83, align 4
+  314:   %84 = udiv i32 %81, 255
+  315:   %85 = add nuw nsw i32 %84, 1
+  316:   %86 = getelementptr inbounds i8, i8* %0, i32 36
+  317:   %87 = bitcast i8* %86 to i32*
+  318:   store i32 %85, i32* %87, align 4
+  319:   %88 = udiv i32 512, %81
+  321:   %89 = mul nsw i32 %85, %88
+...
+
+PARAMETER_LAYOUT_FROM_DEBUG_METADATA
+826: !270 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "_OPUS_ENC_PARA_", file: !46, line: 26, size: 128, elements: !271)
+827: !271 = !{!272, !273, !274, !275, !276, !277}
+828: !272 = !DIDerivedType(tag: DW_TAG_member, name: "sr", scope: !270, file: !46, line: 28, baseType: !15, size: 32)
+829: !273 = !DIDerivedType(tag: DW_TAG_member, name: "br", scope: !270, file: !46, line: 29, baseType: !15, size: 32, offset: 32)
+830: !274 = !DIDerivedType(tag: DW_TAG_member, name: "nch", scope: !270, file: !46, line: 30, baseType: !55, size: 16, offset: 64)
+831: !275 = !DIDerivedType(tag: DW_TAG_member, name: "format_mode", scope: !270, file: !46, line: 31, baseType: !55, size: 16, offset: 80)
+832: !276 = !DIDerivedType(tag: DW_TAG_member, name: "complexity", scope: !270, file: !46, line: 32, baseType: !55, size: 16, offset: 96)
+833: !277 = !DIDerivedType(tag: DW_TAG_member, name: "frame_ms", scope: !270, file: !46, line: 33, baseType: !55, size: 16, offset: 112)
+
+EXCERPT vendor_enc/opus_encoder.o_pi32v2.ll
+   25: @OPUS_LONGFRAME_ENABLE = external local_unnamed_addr constant i32, align 4
+   26: 
+   27: ; Function Attrs: minsize nounwind optsize
+   28: define i32 @opus_encoder_init(%struct._SILK_OpusEncoder*, i8* nocapture readonly) local_unnamed_addr #0 section ".opus_comb_enc.text.cache.L2.run" {
+...
+
+EXCERPT project_opus/mdct.c.obj.ll
+    1: ; ModuleID = 'C:\Users\awalol\AppData\Local\Temp\ac792-vendor-opus-3itp7mta\project_opus\mdct.c.obj.bc'
+    2: source_filename = "C:/Users/awalol/Code/DS5Dongle_AC7925B/sdk/lib/opus_jieli/build/_deps/opus_upstream-src/celt/mdct.c"
+    3: target datalayout = "e-m:e-p:32:32-i1:32-i64:32:32-f64:32:32-n8:16:32-a:0:32"
+    4: target triple = "pi32v2"
+    5: 
+    6: %struct.mdct_lookup = type { i32, i32, [4 x %struct.kiss_fft_state*], float* }
+    7: %struct.kiss_fft_state = type { i32, float, i32, [16 x i16], i16*, %struct.kiss_twiddle_cpx*, %struct.arch_fft_state* }
+    8: %struct.kiss_twiddle_cpx = type { float, float }
+    9: %struct.arch_fft_state = type { i32, i8* }
+   10: %struct.kiss_fft_cpx = type { float, float }
+   11: 
+   12: ; Function Attrs: nounwind
+   13: define void @clt_mdct_forward_c(%struct.mdct_lookup* nocapture readonly, float* nocapture readonly, float* noalias nocapture, float* nocapture readonly, i32, i32, i32, i32) local_unnamed_addr #0 {
+...
+
+PROJECT_MDCT_SOFTWARE_FFT_CALLS
+249:   call void @opus_fft_impl(%struct.kiss_fft_state* %10, %struct.kiss_fft_cpx* nonnull %35) #3
+360:   call void @opus_fft_impl(%struct.kiss_fft_state* nonnull %10, %struct.kiss_fft_cpx* nonnull %35) #3
+564:   tail call void @opus_fft_impl(%struct.kiss_fft_state* %34, %struct.kiss_fft_cpx* %74) #3
+
+ENCODER_INLINE_ASM_CENSUS (49 bitcode modules; 2 native ELF members excluded)
+burg_modified_FIX.o_pi32v2.ll: 4
+asm sideeffect " 1:    \09\0A rep $5 { \09\0A $3 = h[$1++](s)    \09\0A $4 = h[$2++](s)    \09\0A $0 += $3*$4(s)     \09\0A }   \09\0A if($5!=0) goto 1b   \09\0A", "=&r,=&r,=&r,=&r,=&r,=&r,0,1,2,3,4,5,~{cc},~{memory}"(i64 0, i16* %0, i16* %1, i32 undef, i32 undef, i32 %2) #4, !dbg !295, !srcloc !296
+encode_frame_FIX.o_pi32v2.ll: 5
+encode_pulses.o_pi32v2.ll: 1
+entenc.o_pi32v2.ll: 3
+asm sideeffect "$0 = clz($1)", "=r,r"(i32 %0) #4, !dbg !22, !srcloc !23
+find_LPC_FIX.o_pi32v2.ll: 6
+LTP_analysis_filter_FIX.o_pi32v2.ll: 5
+asm sideeffect " $0  = h[$2--]*$3(s) \09\0A $0 += h[$2--]*$4(s) \09\0A $0 += h[$2--]*$5(s) \09\0A $0 += h[$2--]*$6(s) \09\0A $0 += h[$2--]*$7(s) \09\0A $2 += 12            \09\0A $1 = $0>>>14(up) \09\0A $8 = h[$9++](s) \09\0A $1 = $8-$1      \09\0A $1 = sat16($1)(s)   \09\0A $0 = $1*$10(s)  \09\0A $0 >>>= 16 \09\0A h[$11++] = $0.l  \09\0A", "=&r,=&r,=&r,=&r,=&r,=&r,=&r,=&r,=&r,=&r,=&r,=&r,0,1,2,3,4,5,6,7,8,9,10,11,~{memory},~{cc}"(i64 %59, i32 %51, i16* %48, i32 %53, i32 %54, i32 %55, i32 %56, i32 %57, i32 %52, i16* %60, i32 %58, i16* %49) #3, !dbg !162, !srcloc !163
+NLSF_encode.o_pi32v2.ll: 1
+noise_shape_analysis_FIX.o_pi32v2.ll: 13
+NSQ_del_dec.o_pi32v2.ll: 10
+opus.o_pi32v2.ll: 2
+opus_demo.o_pi32v2.ll: 3
+asm sideeffect " 1:    \09\0A rep $2 { \09\0A [$1++] = $0    \09\0A }   \09\0A if($2!=0) goto 1b   \09\0A", "=&r,=&r,=&r,0,1,2,~{memory}"(i32 0, i32* %50, i32 %49) #7, !dbg !651, !srcloc !652
+opus_encoder.o_pi32v2.ll: 1
+pitch_analysis_core_FIX.o_pi32v2.ll: 1
+process_NLSFs.o_pi32v2.ll: 1
+sort.o_pi32v2.ll: 1
+VAD.o_pi32v2.ll: 2
+TOTAL 59 inline asm blocks in 16 bitcode modules
+
+NATIVE_BUILD_MARKERS
+vendor_enc: Dec 11 202511:06:04PI32V2R3_OPUS_COMB_OGG_COEXIST
+vendor_dec: Mar 28 202514:40:08PI32V2R3_ogg_opus_dec_v1_new_API_coexist
+vendor_enc zon.o constant: GIT_VERSION:@20251211-85302fc8-chenjiehua-Add opus_silk longframe mode
+vendor_enc zon.o constant: .opus_enc_lib.text.const
+vendor_enc zon.o constant: opus_enc_lib_version
